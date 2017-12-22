@@ -30,12 +30,9 @@ Bad:
 	-why are two rows in the Sales Pipeline Information table highlighted?
 -bar graphs and pie charts inaccessible to color blind individuals
 
-My design:
--move scale to quarterly (consolidate figures on top line into 3)
--perhaps make another tool to see information by month in a specified quarter
--make table into chart
--make pie charts into stacked bar charts (no selection necessary)
--make the options listed into the key goals (revenue, profit, avg order size)
+
+My design: As the original visualization showed that the company has quarterly goals, I organized the whole tool at the quarterly level, removing the 3 monthly figures. If it's important to see monthly performance within a quarter, I would move this to a different figure where you specify one quarter and see the 3 monthly charts for only that quarter. Infering from the figures included in the original, revenue seems to be the most significant outcome. Therefore, I limited my mockup to revenue. In terms of the pie charts showing the distribution of revenue by product and by region, the distributions among these categories didn't seem informative without knowing the goal or past performance for context, so I removed them. The tables at the bottom were difficult to read and glean any trends from and similarly lacked context. It doesn't seem necessary to have that level of specificity on this type of tool, so my figure replaces them with a bar showing the key pieces of information relative to their goals: current quarter revenue, total revenue to date, and projected revenue through the end of the year. By replacing many of the graphs with clear static indicators, my visualization makes current performance immediately obvious, allows the user to put the current performance in historical context, and summarizes future projections for revenue. It highlights one metric, revenue, and enables the user to see what contributes to its performance. By keeping the total revenue circle and the total revenue chart static, the user can see the total as they explore the contributing factors with the dynamic charts.
+
 
 
 Visualization 2 Notes:
@@ -60,7 +57,7 @@ Bad:
 		-slide title (especially since the slide seems to refer to categories of products rather than individual products)
 	-why are some lines in figure 6 dashed while others are dotted?
 -labels should be more concise
-	-ex. for figure 1, write "Millions of Dollars" along the y-axis then put 0, 2, 4, etc.
+	-ex. for figure 1, write "Dollars" along the y-axis then put 0, 2, 4, etc.
 -low data-ink ratio:
 	-the figures could be made much larger
 		-if the title of the slide and labels on the left were smaller
@@ -72,12 +69,10 @@ Bad:
 -unfocused: unclear what the key outcomes of interest are (sales? margins?) to the company
 -does not make effective use of the length dimension
 
-My design:
--nested bar chart for showing contributions to sales/margin
--figure 1, assume outcome of interest is percent margin, then percent margin on y and sales on x
--not sure whether x-axis represents time but needs to be simplified to either one point in time (2001) or ratios that you plot over time (sales/divided by percent margin over time)
--get rid of 3 because not sure what it's showing
--get rid of 6 or change to average sales
+
+My design: My visualization simplifies the original significantly. As I could not determine what the x-axis represented in any of the plots, I used the plot titles to infer the y and x axes and disregarded the column numbers. I removed figure 3 because it's not clear what data it is trying to show, and I removed figure 6 because a moving average is not an intuitive metric and sales are already represented in the first two figures. I also consolidated figures 4 and 5 into one plot as it might be helpful to compare how a product within the category contributes to sales relative to how it contributes to margins.
+
+
 
 Visualization 3 Notes:
 
@@ -106,9 +101,5 @@ Bad:
 -could be more objective
 	-the way the bins of time are created could mask important variation in the data
 
-My design: 
--if primary comparison is between new orleans saints and platform average, group those bars together
--else group off season and regular season together
--do not group by season
--could do a box plot of average time to return to site or make a dark line between 1+ month and never returns
--could only label the 2 sections
+
+My design: In my visualization, I combine the regular and off season data. I divide the chart into one that shows what percent of visitors return to the site from each group and one that shows how soon visitors return (if they return at all). This makes more apparent the percent of visitors that ever return and how that compares to the average. It also avoids binning units of time into uneven sections (24 hrs, 1-3 days), which can be misleading. 
