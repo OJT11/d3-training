@@ -1,0 +1,53 @@
+<html>
+    <head>
+        <title>Part 3</title>
+    </head>
+
+    <body>
+        <p>Part 3</p>
+        <svg width="1000" height="1000">
+            <circle cx="100" cy="100" r="15" class="update" style="fill:green"></circle>
+            <circle cx="150" cy="100" r="15" class="update" style="fill:green"></circle>
+        </svg>
+
+        <script src="https://d3js.org/d3.v4.min.js"></script>
+        <script>
+            d3.json("data.json", function(data) {
+
+                function updateViz(data) {
+                    var circle = d3.select('svg').selectAll('circle').data(data);
+
+                    circle
+                    .enter()
+                    .append('circle')
+                    .attr('cx', function(d) {
+                        return data.indexOf(d)*100 + 10;
+                    })
+                    .attr('cy', 200)
+                    .attr('r', function(d) { 
+                        return d.size; 
+                    })
+                    .attr('class', 'enter')
+                    .style('stroke', function(d) {
+                        return d.color;
+                    });
+
+                    circle
+                    .exit()
+                    .remove('circle');
+                }
+
+                function animate(data) {
+                    updateViz(data);
+                    var loop = setInterval(function() { 
+                        if (data.length === 0) { clearInterval(loop); }
+                        data.pop();
+                        updateViz(data);
+                    }, 2000);
+                }
+
+                animate(data);
+            });
+        </script>
+    </body>
+</html>

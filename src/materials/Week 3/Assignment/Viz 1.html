@@ -1,0 +1,69 @@
+<html>
+    <head>
+        <title>Part 1</title>
+    </head>
+
+    <body>
+        <script src="https://d3js.org/d3.v4.min.js"></script>
+        <script>
+            var body = d3.select('body');
+
+            body
+            .append('p')
+            .html('Part 1');
+
+            body
+            .append('svg')
+            .attr('width', 1000)
+            .attr('height', 1000);
+
+
+            var svg = d3.select('svg');
+
+            svg
+            .append('rect')
+            .attr('x', 10)
+            .attr('y', 10)
+            .attr('width', 100)
+            .attr('height', 20)
+            .style('fill', 'blue');
+
+
+            var circles = svg.selectAll('circle').data([10, 20, 40]);
+
+            circles
+            .enter()
+            .append('circle')
+            .attr('cx', function(d) { 
+                return d*5;
+            })
+            .attr('cy', 200)
+            .attr('r', function(d) {
+                return d;
+            })
+            .style('fill', 'orange')
+            .style('stroke-width', '2px')
+            .style('stroke', 'blue');
+
+            
+            var sideLength = 6;
+            var squareRoot = Math.sqrt(sideLength);
+            var rightX = 1;
+            var leftX = -1;
+
+            svg
+            .append('polygon')
+            .attr('points', 
+            '' + rightX + ' ' + squareRoot + ', ' +
+                squareRoot + ' ' + rightX + ', ' + 
+                squareRoot + ' ' + leftX + ', ' +
+                rightX + ' ' + -squareRoot + ', ' +
+                leftX + ' ' + -squareRoot + ', ' +
+                -squareRoot + ' ' + leftX + ', ' +
+                -squareRoot + ' ' + rightX + ', ' +
+                leftX + ' ' + squareRoot)
+            .attr('transform', 'scale(20) translate(5,20)')
+            .style('fill', 'red');
+        </script>
+    </body>
+</html>
