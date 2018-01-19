@@ -27,7 +27,7 @@ function createChart(elementId) {
         .append('g')
         .attr('transform', 'translate(' + margins.left + ',' + margins.top + ')');
 
-    // read in climate data
+    // read in air quality data
     d3.csv('data/air_quality.csv', function(error, data) {
 
         if (error) {
@@ -84,9 +84,9 @@ function createChart(elementId) {
             .append('g')
             .attr('class', 'y-axis')
             .call(yAxis);
-
-        var colors = d3.scaleOrdinal(d3.schemeCategory10);
+        
         // bars
+        var colors = d3.scaleOrdinal(d3.schemeCategory10);
         g
             .selectAll('.bar')
             .data(data)
@@ -108,21 +108,53 @@ function createChart(elementId) {
             })
             .attr('stroke', 'none');
 
-        // data labels
-        // g
-        //     .selectAll('.label')
-        //     .data(data)
-        //     .enter()
-        //     .append('text')
-        //     .attr('class', 'label')
-        //     .attr('x', 0)
-        //     .attr('y', function(d) {
-        //         return y(d.year);
-        //     })
-        //     .text(function(d) {
-        //         return d.year;
-        //     })
-        //     .style('font-size', 10);
+        // legend
+        var regions = Array.from(new Set(data.map(function (d) {
+            return d.Region;
+        })));
+        console.log('regions: ', regions);
+
+        g
+            .append('rect')
+            .attr('class', 'legend')
+            .attr('x', 40)
+            .attr('y', 10)
+            .attr('height', 50)
+            .attr('width', 100)
+            .style('fill', 'none')
+            .style('stroke', 'black');
+
+        g
+            .selectAll('.legend-color')
+            .data(regions)
+            .enter()
+            .append('rect')
+            .attr('class', 'legend-color')
+            .attr('x', 50)
+            .attr('y', function(d) {
+                return regions.indexOf(d) * 10 + 15;
+            })
+            .attr('height', 10)
+            .attr('width', 10)
+            .style('fill', function(d) {
+                return colors(d);
+            });
+
+        g
+            .selectAll('.legend-text')
+            .data(regions)
+            .enter()
+            .append('text')
+            .attr('class', 'legend-text')
+            .attr('x', 75)
+            .attr('y', function(d) {
+                return regions.indexOf(d) * 10 + 17;
+            })
+            .attr('dominant-baseline', 'hanging')
+            .text(function(d) {
+                return d;
+            })
+            .style('font-size', 10);
 
         // axis labels
         g

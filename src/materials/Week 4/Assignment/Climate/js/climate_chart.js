@@ -26,8 +26,8 @@ function createChart(elementId) {
             left: 50
         };
 
-        // set the height such that each bar is 5px, with 2px space after all but last bar
-        var height = data.length * 7 - 2 + 7 + margins.top + margins.bottom;
+        // set the svg height such that each bar is 5px, with 2px space after all but last bar
+        var height = (data.length * 7 - 2) + 7 + margins.top + margins.bottom;
         var width = 1000;
 
         // dimensions within svg
@@ -91,15 +91,12 @@ function createChart(elementId) {
             .attr('transform', 'translate(' + rightShift + ',0)')
             .call(yAxis);
 
-        // group data by decade
+        // group data by decade for coloring
         data.forEach(function(d) {
-                d.decade = d.year.toString().slice(0, -1);
+            d.decade = d.year.toString().slice(0, -1);
         })
-
         console.log('decade data:', data);
         var colors = d3.scaleOrdinal(d3.schemeCategory20);
-
-        
 
         // bars
         g
@@ -144,7 +141,7 @@ function createChart(elementId) {
             .text(function(d) {
                 return d.year;
             })
-            .style('font-size', 10);
+            .style('font-size', 9);
 
         // axis labels
         g
