@@ -10,6 +10,12 @@ function createChart(elementId) {
 
         console.log('raw data: ', data);
 
+        // check for missing data
+        var missingData = data.filter(function(d) {
+            return !d.year || !d.temp;
+        })
+        console.log('missing data: ', missingData)
+
         // convert data to appropriate types
         var parseTime = d3.timeParse('%Y');
 
@@ -18,7 +24,7 @@ function createChart(elementId) {
             d.temp = +d.temp;
         });
 
-        console.log('numeric data: ', data);
+        console.log('recoded data: ', data);
 
         // svg height, width, and inside margins
         var height = 1000;
@@ -53,8 +59,7 @@ function createChart(elementId) {
             .domain(
                 d3.extent(data, function(d) {
                     return d.year;
-                })
-            )
+                }))
             .range([0, innerWidth]);
 
         console.log('x scale: ', x.domain(), x.range());
@@ -71,20 +76,18 @@ function createChart(elementId) {
         console.log('y scale: ', y.domain(), y.range());
 
         // axes
-        var upShift = y(0);
-
+        var verticalShift = y(0);
+        
         var xAxis = d3.axisBottom(x).ticks(d3.timeYear.every(1));
 
         g
             .append('g')
             .attr('class', 'x-axis')
-            .attr('transform', 'translate(0,' + upShift + ')')
+            .attr('transform', 'translate(0,' + verticalShift + ')')
             .call(xAxis)
             .selectAll("text")  
             .style("text-anchor", "end")
-            .attr("dx", "-.8em")
-            .attr("dy", ".15em")
-            .attr("transform", "rotate(-90)" );
+            .attr("transform", "rotate(-90) translate(-10, -12)" );
 
         var yAxis = d3.axisLeft(y);
 
@@ -127,7 +130,6 @@ function createChart(elementId) {
             .attr('class', 'line')
             .attr('fill', 'none')
             .attr('stroke', 'red')
-            .attr('stroke-width', 1.5)
             .attr('d', line);
 
         // axis labels
@@ -135,7 +137,7 @@ function createChart(elementId) {
             .append('text')
             .attr('class', 'x-axis-label')
             .attr('x', innerWidth + 20)
-            .attr('y', upShift)
+            .attr('y', verticalShift)
             .attr('text-anchor', 'middle')
             .attr('dominant-baseline', 'hanging')
             .text('Year');

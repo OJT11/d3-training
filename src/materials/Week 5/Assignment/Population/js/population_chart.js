@@ -10,12 +10,20 @@ function createChart(elementId) {
 
         console.log('raw data: ', data);
 
+        // check for missing data
+        var missingData = data.filter(function(d) {
+            return !d.year || !d.pop;
+        })
+        console.log('missing data: ', missingData)
+
         // convert data to appropriate types
         var parseTime = d3.timeParse('%Y');
 
         data.forEach(function(d) {
             d.year = parseTime(d.year.split("January-")[1]);
-            d.pop = +d.pop;
+            if(d.pop) {
+                d.pop = +d.pop;
+            }
         });
 
         console.log('numeric data: ', data);
@@ -62,29 +70,26 @@ function createChart(elementId) {
         var y = d3
             .scaleLinear()
             .domain(
-                d3.extent(data, function(d) {
+                [0,
+                d3.max(data, function(d) {
                     return d.pop;
-                })
+                })]
             )
             .range([innerHeight, 0]);
 
         console.log('y scale: ', y.domain(), y.range());
 
         // axes
-        var upShift = y(0);
-
         var xAxis = d3.axisBottom(x).ticks(d3.timeYear.every(1));
 
         g
             .append('g')
             .attr('class', 'x-axis')
-            .attr('transform', 'translate(0,' + upShift + ')')
+            .attr('transform', 'translate(0,' + innerHeight + ')')
             .call(xAxis)
             .selectAll("text")  
             .style("text-anchor", "end")
-            .attr("dx", "-.8em")
-            .attr("dy", ".15em")
-            .attr("transform", "rotate(-90)" );
+            .attr("transform", "rotate(-90) translate(-10, -12)" );
 
         var yAxis = d3.axisLeft(y);
 
@@ -101,6 +106,9 @@ function createChart(elementId) {
             })
             .y(function(d) {
                 return y(d.pop);
+            })
+            .defined(function(d) {
+                return d.pop != null;
             });
 
         // lines
@@ -110,7 +118,7 @@ function createChart(elementId) {
         
         var colors = d3.scaleOrdinal(d3.schemeCategory20);
 
-        console.log('countries: ', countries, ' colors: ', colors);
+        console.log('countries: ', countries);
 
         var groups = g
             .selectAll('.country')
@@ -122,8 +130,8 @@ function createChart(elementId) {
         groups
             .append('path')
             .datum(function(d) {
-                return data.filter(function(c) {
-                    return c.country === d;
+                return data.filter(function(g) {
+                    return g.country === d;
                 });
             })
             .attr('class', 'pop-line')
@@ -131,7 +139,7 @@ function createChart(elementId) {
             .attr('stroke', function(d) {
                 return colors(d[0].country);
             })
-            .attr('stroke-width', 1.5)
+            .attr('stroke-width', 2)
             .attr('d', line);
 
         // legend
@@ -139,7 +147,7 @@ function createChart(elementId) {
             .append('g')
             .attr('class', 'legend');
 
-        var legendHeight = countries.length * 10 + 30;
+        var legendHeight = countries.length * 10 + 15;
 
         legend
             .append('rect')
@@ -214,7 +222,7 @@ function createChart(elementId) {
             .attr('text-anchor', 'middle')
             .attr('dominant-baseline', 'baseline')
             .style('font-size', 24)
-            .text('Population of China vs India by Year');
+            .text('Population by Country by Year');
     });
 };
 
