@@ -5,6 +5,7 @@
 
     <body>
         <script src="https://d3js.org/d3.v4.min.js"></script>
+        <script type="text/javascript" src="createTable.js"></script>
         <script>
 
         // read in pokemon data
@@ -22,10 +23,10 @@
                 d.heightInches = d.height.split(" m")[0] * 39.3701;
                 d.weightLbs = d.weight.split(" kg")[0] * 2.20462;
                 d.eggDistance = +d.egg.split(" km")[0];
-                d.spawnTimeArray = +d.spawn_time.split(":");
-                d.spawnTimeMinutes = d.spawnTimeArray[0];
+                d.spawnTimeArray = d.spawn_time.split(":");
+                d.spawnTimeMinutes = +d.spawnTimeArray[0];
 
-                if(d.spawnTimeArray.length > 1 && d.spawnTimeArray[1] > 0) {
+                if(d.spawnTimeArray.length > 1 && +d.spawnTimeArray[1] > 0) {
                     d.spawnTimeMinutes += (d.spawnTimeArray[1]/60);
                 }
             });
@@ -42,11 +43,11 @@
 
             // part B
             var eggTotal = data.reduce(function(s, d) {
-                if(d.weaknesses.indexOf("Psychic") > 0) {
+                if(d.weaknesses.indexOf("Psychic") >= 0) {
                     if(d.eggDistance) {
                         return s + d.eggDistance;
                     }
-                    else {
+                    else if(d.egg == "Not in Eggs") {
                         return s - 1;
                     }
                 } else {
@@ -59,36 +60,33 @@
             data.forEach(function(d) {
                 var currTypes = d.type;
                 currTypes.forEach(function(e) {
-                    if(Object.keys(typesAndWeaknesses).indexOf(e) > 0) {
+                    if(Object.keys(typesAndWeaknesses).indexOf(e) >= 0) {
                         typesAndWeaknesses[e].numWeaknesses += d.weaknesses.length;
                         typesAndWeaknesses[e].numPokemon += 1;
                     } else {
-                        typesAndWeaknesses[e] = { numWeaknesses: d.weaknesses.length, numPokemon: 1};
+                        typesAndWeaknesses[e] = { numWeaknesses: d.weaknesses.length, numPokemon: 1 };
                     }
                 });
             });
            
-            var typesWeaknessesList = [];
-            Object.keys(typesAndWeaknesses).forEach(function(d) {
-                typesWeaknessesList.push({
+            var typesWeaknessesList = Object.keys(typesAndWeaknesses).map(function(d) {
+                return {
                     type: d, 
                     numWeaknesses: typesAndWeaknesses[d].numWeaknesses,
                     numPokemon: typesAndWeaknesses[d].numPokemon,
                     avgWeaknesses: typesAndWeaknesses[d].numWeaknesses/typesAndWeaknesses[d].numPokemon
-                });
+                };
             });
+
             typesWeaknessesList.sort(function(a, b) {
                 return b.avgWeaknesses - a.avgWeaknesses;
-            })
-            console.log(typesAndWeaknesses, typesWeaknessesList);
+            });
 
             // part D
-            // break the pokemon down into 5 equal buckets of weight classes and then average teh spawn_time (show in minutes) of each weight class
-            var weightSorted = data.sort(function(a, b) {
+            data.sort(function(a, b) {
                 return a.weightLbs - b.weightLbs;
             });
-            var groupIndices = [29, 59, 89, 119];
-            console.log(data, weightSorted);
+            var groupIndices = [30, 60, 90, 120];
 
             data.forEach(function(d, i) {
                 if(i < groupIndices[0]) {
@@ -125,69 +123,15 @@
                 });
             }
 
-            console.log(spawnTimeByWeight);
 
             // display answers
             var answerBox = d3.selectAll('body').append('div').attr('class', 'answers');
             answerBox.append('p').text('Average height of pokemon: ' + avgHeight);
             answerBox.append('p').text('Average weight of pokemon: ' + avgWeight);
             answerBox.append('p').text('Total egg distance for all pokemon who have a weakness of Psychic: ' + eggTotal);
-
-            var typesWeaknessesAnswer = answerBox.append('p').text('Number of weaknesses by type of pokemon:');
-            var typesWeaknessesTable = typesWeaknessesAnswer.append('table');
-
-            typesWeaknessesTable
-                .append('tr')
-                .selectAll('td')
-                .data(['Type', 'Number of Weaknesses', 'Number of Pokemon', 'Average Number of Weaknesses'])
-                .enter()
-                .append('td')
-                .text(function(d) {
-                    return d;
-                });
-
-            typesWeaknessesTable
-                .selectAll('tr.data')
-                .data(typesWeaknessesList)
-                .enter()
-                .append('tr')
-                .selectAll('td')
-                .data(function(d) {
-                    return [d.type, d.numWeaknesses, d.numPokemon, d.avgWeaknesses];
-                })
-                .enter()
-                .append('td')
-                .text(function(d) {
-                    return d;
-                });
-
-            var weightSpawnAnswer = answerBox.append('p').text('Average spawn time by weight class:');
-            var weightSpawnTable = weightSpawnAnswer.append('table');
-
-            weightSpawnTable
-                .append('tr')
-                .selectAll('td')
-                .data(['Weight Class (lbs)', 'Spawn Time (mins)'])
-                .enter()
-                .append('td')
-                .text(function(d) {
-                    return d;
-                });
-
-            weightSpawnTable
-                .selectAll('tr.data')
-                .data(spawnTimeByWeight)
-                .enter()
-                .append('tr')
-                .selectAll('td')
-                .data(function(d) {
-                    return [d.weightClass, d.spawnTime];
-                })
-                .enter()
-                .append('td')
-                .text(function(d) {
-                    return d;
-                });
+            createTable(answerBox, 'Number of weaknesses by type of pokemon:', ['Type', 'Number of Weaknesses', 'Number of Pokemon', 'Average Number of Weaknesses'], typesWeaknessesList, ["type", "numWeaknesses", "numPokemon", "avgWeaknesses"]);
+            createTable(answerBox, 'Average spawn time by weight class:', ['Weight Class (lbs)', 'Spawn Time (mins)'], spawnTimeByWeight, ["weightClass",
+             "spawnTime"]);
 
         });
 
