@@ -5,6 +5,7 @@
 
     <body>
         <script src="https://d3js.org/d3.v4.min.js"></script>
+        <script type="text/javascript" src="createTable.js"></script>
         <script>
 
         // read in cars data
@@ -32,112 +33,33 @@
             // part B
             var makesByCountry = {};
             data.forEach(function(d) {
-                if(Object.keys(makesByCountry).indexOf(d.make_country) > 0) {
+                if(Object.keys(makesByCountry).indexOf(d.make_country) >= 0) {
                     makesByCountry[d.make_country] += 1;
                 } else {
                     makesByCountry[d.make_country] = 1;
                 }
             });
             
-            makesByCountryList = [];
-            Object.keys(makesByCountry).forEach(function (d) {
-                makesByCountryList.push({country: d, makes: makesByCountry[d]});
+            var makesByCountryList = Object.keys(makesByCountry).map(function(d) {
+                return {country: d, makes: makesByCountry[d], common: 0, uncommon: 0 };
             });
-
-            console.log(makesByCountry, makesByCountryList);
 
             // part C
-            var makesByCountryAndCommon = {};
-
-            function commonUncommon(common, uncommon) { 
-                this.common = common;
-                this.uncommon = uncommon;
-            }
-
-            function counts(make_is_common) {
-                return { 
-                    common: make_is_common ? 1 : 0, 
-                    uncommon: make_is_common ? 0 : 1 
-                };
-            }
-
             data.forEach(function(d) {
-                var currCounts = counts(d.make_is_common);
+                var currCountry = makesByCountryList.filter(function(e) {
+                    return d.make_country == e.country;
+                })[0];
 
-                if(Object.keys(makesByCountryAndCommon).indexOf(d.make_country) > 0) {
-                    var currObject = makesByCountryAndCommon[d.make_country];
-                    currObject.common += currCounts.common;
-                    currObject.uncommon += currCounts.uncommon;
-                } else {
-                    makesByCountryAndCommon[d.make_country] = new commonUncommon(currCounts.common, currCounts.uncommon);
-                }
+                currCountry.common += d.make_is_common ? 1 : 0;
+                currCountry.uncommon += d.make_is_common ? 0 : 1;
             });
 
-            makesByCountryAndCommonList = [];
-            Object.keys(makesByCountryAndCommon).forEach(function (d) {
-                makesByCountryAndCommonList.push({country: d, makes: makesByCountryAndCommon[d]});
-            });
-            console.log(makesByCountryAndCommon, makesByCountryAndCommonList);
 
             // display answers
             var answerBox = d3.selectAll('body').append('div').attr('class', 'answers');
             answerBox.append('p').text('Number of makes considered common: ' + commonMakes);
-
-            var makesByCountryAnswer = answerBox.append('p').text('Number of makes by country:');
-            var makesByCountryTable = makesByCountryAnswer.append('table');
-
-            makesByCountryTable
-                .append('tr')
-                .selectAll('td')
-                .data(['Country', 'Number of Makes'])
-                .enter()
-                .append('td')
-                .text(function(d) {
-                    return d;
-                });
-
-            makesByCountryTable
-                .selectAll('tr.data')
-                .data(makesByCountryList)
-                .enter()
-                .append('tr')
-                .selectAll('td')
-                .data(function(d) {
-                    return [d.country, d.makes];
-                })
-                .enter()
-                .append('td')
-                .text(function(d) {
-                    return d;
-                });
-
-            var makesByCountryAndCommonAnswer = answerBox.append('p').text('Number of makes by country and commonality of the make:');
-            var makesByCountryAndCommonTable = makesByCountryAndCommonAnswer.append('table');
-
-            makesByCountryAndCommonTable
-                .append('tr')
-                .selectAll('td')
-                .data(['Country', 'Number of Common Makes', 'Number of Uncommon Makes'])
-                .enter()
-                .append('td')
-                .text(function(d) {
-                    return d;
-                });
-
-            makesByCountryAndCommonTable
-                .selectAll('tr.data')
-                .data(makesByCountryAndCommonList)
-                .enter()
-                .append('tr')
-                .selectAll('td')
-                .data(function(d) {
-                    return [d.country, d.makes.common, d.makes.uncommon];
-                })
-                .enter()
-                .append('td')
-                .text(function(d) {
-                    return d;
-                });
+            createTable(answerBox, 'Number of makes by country:', ['Country', 'Number of Makes'], makesByCountryList, ["country", "makes"]);
+            createTable(answerBox, 'Number of makes by country and commonality of the make:', ['Country', 'Number of Common Makes', 'Number of Uncommon Makes'], makesByCountryList, ["country", "common", "uncommon"]);
 
         });
 

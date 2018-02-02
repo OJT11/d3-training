@@ -22,7 +22,12 @@
                 d.heightInches = d.height.split(" m")[0] * 39.3701;
                 d.weightLbs = d.weight.split(" kg")[0] * 2.20462;
                 d.eggDistance = +d.egg.split(" km")[0];
-                d.spawnTimeMinutes = +d.spawn_time.split(":")[0];
+                d.spawnTimeArray = +d.spawn_time.split(":");
+                d.spawnTimeMinutes = d.spawnTimeArray[0];
+
+                if(d.spawnTimeArray.length > 1 && d.spawnTimeArray[1] > 0) {
+                    d.spawnTimeMinutes += (d.spawnTimeArray[1]/60);
+                }
             });
 
             console.log('recoded data: ', data);
