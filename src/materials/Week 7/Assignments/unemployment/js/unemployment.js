@@ -38,6 +38,61 @@ function createMap(elementId) {
         .style('font-size', 24)
         .text('U.S. Unemployment over Time');
 
+    // read in data
+    function readCSV(i) {
+        d3.csv('data/laucnty' + i + '.csv', function(error, data) { 
+            handleError(error, 'failed to read laucnty' + i + '.csv');
+            console.log('raw laucnty' + i + '.csv data: ', data);
+
+            // create FIPS code
+            data.forEach(function(d) {
+                d.id = d.StateCode + d.CountyCode;
+            });
+
+            if(i <= 16) {
+                // add data to object and to list
+                countyData['20' + i] = data;
+                countyDataList = countyDataList.concat(data);
+
+                if(i < 16) {
+                    // read in next file
+                    i++;
+                    return readCSV(i);
+                } else {
+                    console.log('county data', countyData);
+                    console.log('county data list: ', countyDataList);
+                    
+                    readJSON();
+                }
+            }
+        });
+    };
+
+    function readJSON() {
+        d3.json('data/us-counties.json', function(error, data) {
+            handleError(error, 'failed to read us-counties.json');
+            console.log('us-counties.json data: ', data);
+            
+            var opacityScale = createScale();
+            var mapPositions = getMapPositions();
+
+            for(i = 2012; i <= 2016; i++)
+            {
+                draw(data, i, opacityScale, mapPositions);
+            }
+        });
+    }
+
+    function handleError(error, msg) {
+        if (error) {
+            console.error(msg);
+        }
+    }
+
+    var countyData = {};
+    var countyDataList = [];   
+    readCSV(12);
+
     // scale
     function createScale() {
         var opacityScale = d3
@@ -46,7 +101,6 @@ function createMap(elementId) {
             return d.Percent;
         })])
         .range([0, 1]);
-        console.log(opacityScale.domain(), opacityScale.range());
 
         createLegend(opacityScale);
 
@@ -55,13 +109,12 @@ function createMap(elementId) {
     
     // legend
     function createLegend(opacityScale) {
+        var numLegendIntervals = 4;
         var legendValues = [];
-        for(j = 0; j <= 5; j++)
+        for(j = 0; j <= numLegendIntervals; j++)
         {
-            legendValues.push(Math.round(opacityScale.invert(j/5)));
+            legendValues.push({value: opacityScale.invert(j/numLegendIntervals).toFixed(1), color: 'blue', opacity: j/numLegendIntervals });
         }
-        legendValues.push('NaN');
-        console.log(legendValues);
 
         // legend
         var legendGroup = g
@@ -77,7 +130,7 @@ function createMap(elementId) {
             .attr('class', 'legend-box')
             .attr('x', legendX)
             .attr('y', legendY)
-            .attr('height', 105)
+            .attr('height', 100)
             .attr('width', 125)
             .style('fill', 'none')
             .style('stroke', 'black')
@@ -108,20 +161,12 @@ function createMap(elementId) {
             .attr('height', 10)
             .attr('width', 10)
             .style('fill', function(d) {
-                if(isNaN(d)) {
-                    return 'grey';
-                } else {
-                    return 'blue';
-                }
+                return d.color;
             })
-            .style('opacity', function(d) {
-                if(isNaN(d)) {
-                    return 1;
-                } else {
-                    return opacityScale(d);
-                }
+            .attr('fill-opacity', function(d) {
+                return d.opacity;
             })
-            .style('stroke', 'black');
+            .attr('stroke', 'black');
 
         // legend text
         legendGroup
@@ -136,101 +181,38 @@ function createMap(elementId) {
             })
             .attr('dominant-baseline', 'hanging')
             .text(function(d) {
-                return d;
+                return d.value;
             })
             .style('font-size', 10);
     }
 
-
-    // read in data
-    function readCSV(i) {
-        d3.csv('data/laucnty' + i + '.csv', function(error, data) { 
-            handleError(error, 'failed to read laucnty' + i + '.csv');
-
-            console.log('raw laucnty' + i + '.csv data: ', data);
-            data.forEach(function(d) {
-                d.id = d.StateCode + d.CountyCode;
-            });
-            i ++;
-
-            if(i <= 16) {
-                 countyData['20' + (i-1)] = data;
-                 countyDataList = countyDataList.concat(data);
-                 return readCSV(i);
-            } else {
-                if( i == 17) {
-                    countyDataList = countyDataList.concat(data);
-                    countyData['20' + (i-1)] = data;
-                }
-                readJSON();
-            } 
-        });
-    };
-
-    function handleError(error, msg) {
-        if (error) {
-            console.error(msg);
-        }
-    }
-
-    var countyData = {};
-    var countyDataList = [];
-        
-    readCSV(12);
-
-    function readJSON() {
-        d3.json('data/us-counties.json', function(error, data) {
-            handleError(error, 'failed to read us-counties.json');
-            console.log('us-counties.json data: ', data);
-            console.log('all county data', countyData);
-            console.log('all county data list: ', countyDataList);
-
-            var opacityScale = createScale();
-            for(i = 2012; i <= 2016; i++)
-            {
-                draw(data, i, opacityScale);
-            }
-        });
-    }
-
-    function mergeData(geoJSON, year) {
-        geoJSON.features.forEach(function(d) {
-            var match = countyData[year].filter(function(e) {
-                return e.id == d.id.toString();
-            });
-            if(match[0]) {
-                d.properties.unemployment_rate = +match[0].Percent;
-            } else {
-                d.properties.unemployment_rate = null
-            };
-        });
-    };
-    
-    function draw(geoJSON, year, opacityScale) {
-
-        mergeData(geoJSON, year);
-
+    function getMapPositions() {
         var position = innerWidth/5 + 20;
         var shift = -180;
 
-        yearToLocation = {
+        return {
             2012: position + shift,
             2013: position*2 + shift,
             2014: position*3 + shift,
             2015: position*4 + shift,
             2016: position*5 + shift
         }
+    }
+
+    function draw(geoJSON, year, opacityScale, positions) {
+
+        mergeData(geoJSON, year);
 
         var albersProj = d3
             .geoAlbersUsa()
             .scale(375)
-            .translate([yearToLocation[year], innerHeight / 2]);
+            .translate([positions[year], innerHeight / 2]);
         var geoPath = d3.geoPath().projection(albersProj);
 
         // map path
         var yearGroup = g
             .append('g')
-            .attr('class', year + 'paths');
+            .attr('class', year + ' paths');
         yearGroup
             .selectAll('path')
             .data(geoJSON.features)
@@ -244,7 +226,7 @@ function createMap(elementId) {
                     return 'grey';
                 }
             })
-            .style('opacity', function(d) {
+            .attr('fill-opacity', function(d) {
                 if(d.properties.unemployment_rate) {
                     return opacityScale(d.properties.unemployment_rate);
                 } else {
@@ -258,12 +240,26 @@ function createMap(elementId) {
         g
             .append('text')
             .attr('class', 'title')
-            .attr('x', yearToLocation[year])
+            .attr('x', positions[year])
             .attr('y', 150)
             .attr('text-anchor', 'middle')
             .attr('dominant-baseline', 'baseline')
             .style('font-size', 18)
             .text(year);
+    };
+
+    function mergeData(geoJSON, year) {
+        geoJSON.features.forEach(function(d) {
+            var match = countyData[year].filter(function(e) {
+                return e.id == d.id;
+            });
+
+            if(match[0]) {
+                d.properties.unemployment_rate = +match[0].Percent;
+            } else {
+                d.properties.unemployment_rate = null
+            };
+        });
     };
 
 };
