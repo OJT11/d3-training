@@ -2,7 +2,7 @@ function createMap(elementId) {
 
     // svg height, width, and inside margins
     var height = 600;
-    var width = 1500;
+    var width = 1325;
     var margins = {
         top: 50,
         right: 50,
@@ -30,12 +30,12 @@ function createMap(elementId) {
 
     // read in data
     d3.json('data/us-states.json', function(error, geoJSONStates) {
-        console.log('raw us-states.json data: ', geoJSONStates);
         handleError(error, 'failed to read us-states.json');
+        console.log('raw us-states.json data: ', geoJSONStates);
 
         d3.csv('data/NSRDB_StationsMeta.csv', function(error, stations) {
-            console.log('raw NRDB_StationMeta.csv data: ', stations);
             handleError(error, 'failed to read NRDB_StationMeta.csv');
+            console.log('raw NRDB_StationMeta.csv data: ', stations);
 
             draw(geoJSONStates, stations);
         });
@@ -44,7 +44,6 @@ function createMap(elementId) {
     function handleError(error, msg) {
         if (error) {
             console.error(msg);
-            return;
         }
     }
 
@@ -55,10 +54,10 @@ function createMap(elementId) {
             .translate([innerWidth / 2, innerHeight / 2]);
         var geoPath = d3.geoPath().projection(albersProj);
 
-        var stationCoordinates = prepStations(stations, albersProj);
-        var classes = getClasses(stationCoordinates);
+        var stationsData = prepStations(stations, albersProj);
+        var classes = getClasses(stationsData);
         var colors = d3.scaleOrdinal(d3.schemeCategory10);
-        var radius = getRadiusScale(stationCoordinates);
+        var radius = getRadiusScale(stationsData);
         
 
         // map path
@@ -81,7 +80,7 @@ function createMap(elementId) {
             .attr('class', 'station-points');
         stationGroup
             .selectAll('circle')
-            .data(stationCoordinates)
+            .data(stationsData)
             .enter()
             .append('circle')
             .attr('cx', function(d) {
@@ -104,7 +103,7 @@ function createMap(elementId) {
             .append('g')
             .attr('class', 'legend');
 
-        var legendX = 900;
+        var legendX = 800;
         var legendY = 50;
 
         // legend box
@@ -184,25 +183,22 @@ function createMap(elementId) {
         });
     }
 
-    function getClasses(stationCoordinates) {
-        return Array.from(new Set(stationCoordinates.map(function (d) {
+    function getClasses(stationsData) {
+        return Array.from(new Set(stationsData.map(function (d) {
             return d.class;
         }))).sort();
     }
 
-    function getRadiusScale(stationCoordinates) {
-        var radius = d3
+    function getRadiusScale(stationsData) {
+        return d3
             .scaleLog()
             .domain(
-                [1, d3.max(stationCoordinates, function(d) {
+                [1, d3.max(stationsData, function(d) {
                     return d.elevation;
                 })]
             )
             .range([1, 7]) // edited these to reduce the size of the points
             .clamp(true);
-
-        console.log('radius scale: ', radius.domain(), radius.range(), radius(15));
-        return radius;
     }
 
 };
