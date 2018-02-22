@@ -1,0 +1,29 @@
+<html>
+
+    <head>
+        <title>Air Quality Chart</title>
+        <link rel="stylesheet" href="./css/styles.css" />
+    </head>
+
+    <body>
+    	<div id="radioButtonGroup">
+    		<input type="radio" id="state" name="sortMethod" value="State">
+    		<label for="state">Sort By State</label>
+    		<input type="radio" id="emissionsDesc" name="sortMethod" value="EmissionsDesc">
+    		<label for="state">Sort By Emissions Descending</label>
+    		<input type="radio" id="emissionsAsc" name="sortMethod" value="EmissionsAsc">
+    		<label for="state">Sort By Emissions Ascending</label>
+    	</div>
+
+		<div id="delayGroup">
+			<label for="delay">Delay(in milliseconds)</label>
+    		<input type="text" id="delay" name="delay">
+    	</div>
+
+        <div id="air-chart-holder"></div>
+
+        <script src="https://d3js.org/d3.v4.min.js"></script>
+        <script src="./js/air_chart.js"></script>    
+    </body>
+
+</html>
