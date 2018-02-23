@@ -190,7 +190,7 @@ function createChart(elementId) {
             .text('Emissions by State');
 
         
-        // radio buttons
+        // interactions and transitions
         function getLastSortOrder() {
             if(lastSorted == undefined) {
                 return data;
@@ -228,7 +228,7 @@ function createChart(elementId) {
         function highToLow(a, b) {
             if (a.Emissions > b.Emissions) {
                 return -1;
-              }
+            }
             if (a.Emissions < b.Emissions) {
                 return 1;
             }
@@ -246,51 +246,52 @@ function createChart(elementId) {
         var lastSorted;
         var dataSorted;
         var input;
+        var sortDuration = 1500;
 
         d3.select('#radioButtonGroup').on('change', function() {
-            //how to use this.value?
 
-            var selectedSortMethod = this.querySelector(':checked').value;
-
+            // get current order of states
             lastSorted = getLastSortOrder().map(x => x.State);
             console.log("last sorted", lastSorted);
 
-
+            // sort data into new order
             dataSorted = copyObjectArray(data)
-                .sort(callSort(selectedSortMethod));
+                .sort(callSort(event.target.value));
             console.log("data sorted", dataSorted);
 
-            var sortDuration = 1500;
+            // determine delay from user input
             var delayFactor = getDelayFactor();
             
-
+            // update x-axis with new order
             x.domain(
-                dataSorted
-                .map(function(d) {
+                dataSorted.map(function(d) {
                     return d.State;
                 })
             );
-            g.select('.x-axis')
-            .transition()
-            .duration(sortDuration)
-            .call(xAxis);
-            // does this need a delay?
 
-            g.selectAll('.bar')
-            .data(data)
-            .transition()
-            .delay(function(d) {
-                return lastSorted.indexOf(d.State)*delayFactor;
-            })
-            .duration(sortDuration)
-            .attr('x', function(d) {
-                return x(d.State);
-            });
+            g
+                .select('.x-axis')
+                .transition()
+                .duration(sortDuration)
+                .call(xAxis);
+
+            // move bars to reflect new order
+            g
+                .selectAll('.bar')
+                .data(data)
+                .transition()
+                .delay(function(d) {
+                    return lastSorted.indexOf(d.State)*delayFactor;
+                })
+                .duration(sortDuration)
+                .attr('x', function(d) {
+                    return x(d.State);
+                });
         });
 
         d3.select('#delay').on('change', function() {
             input = parseFloat(this.value);
-            if(isNaN(input)) {
+            if(isNaN(input) && this.value != "") {
                 alert("Please enter a number.");
                 input = null;
             }
