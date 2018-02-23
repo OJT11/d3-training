@@ -289,7 +289,7 @@ function createChart(elementId) {
         });
 
         d3.select('#delay').on('change', function() {
-            input = parseFloat(this.value)
+            input = parseFloat(this.value);
             if(isNaN(input)) {
                 alert("Please enter a number.");
                 input = null;
