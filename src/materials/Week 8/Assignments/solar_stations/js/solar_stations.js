@@ -192,7 +192,9 @@ function createMap(elementId) {
 
         // form
         var formGroup = d3.select('body')
-            .append('div');
+            .append('div')
+            .style('position', 'relative')
+            .style('top', '-90%');
 
         var checkboxes = formGroup
             .append('form')
@@ -247,7 +249,6 @@ function createMap(elementId) {
         var duration = 1500;
 
         d3.select('#checkboxForm').on('change', function() {
-            //how to use this.value?
 
             var target = event.target;
             var circleSelection = stationGroup
