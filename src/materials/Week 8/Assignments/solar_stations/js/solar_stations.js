@@ -190,7 +190,7 @@ function createMap(elementId) {
             .text('Map of U.S. Solar Stations');
 
 
-        // form
+        // interactions and transitions
         var formGroup = d3.select('body')
             .append('div')
             .style('position', 'relative')
@@ -213,6 +213,9 @@ function createMap(elementId) {
             .append('input')
             .attr('type', 'checkbox')
             .attr('checked', true)
+            .attr('id', function(d) {
+                return "class" + d;
+            })
             .attr('value', function(d) {
                 return d;
             });
@@ -246,16 +249,30 @@ function createMap(elementId) {
             .attr('id', 'submitButton')
             .text('Filter Stations');
 
-        var duration = 1500;
+        var submittedMin;
+        var submittedMax;
+
+        function filterByElevation(initialData) {
+            var finalData = initialData;
+            if(submittedMin) {
+                finalData = finalData.filter(x => x.elevation >= submittedMin);
+            }
+            if(submittedMax) {
+                finalData = finalData.filter(x => x.elevation <= submittedMax);
+            }
+            return finalData;
+        }
 
         d3.select('#checkboxForm').on('change', function() {
 
             var target = event.target;
+            var elevationFilteredData = filterByElevation(stationsData);
+            var radiusChangeDuration = 1500;
             var circleSelection = stationGroup
                     .selectAll('circle');
-
+            
             if(target.checked) {
-                var dataToAdd = stationsData.filter(x => x.class == target.value);
+                var dataToAdd = elevationFilteredData.filter(x => x.class == target.value);
                 var selection = circleSelection
                     .data(dataToAdd, function(d) {
                         return d.index;
@@ -267,27 +284,26 @@ function createMap(elementId) {
 
                 selection
                     .transition()
-                    .duration(duration)
+                    .duration(radiusChangeDuration)
                     .attr('r', function(d) {
                         return radius(d.elevation);
                     });
                 
             } else {
-                var dataToKeep = stationsData.filter(x => x.class != target.value);
+                var dataToKeep = elevationFilteredData.filter(x => x.class != target.value);
                 circleSelection
                     .data(dataToKeep, function(d) {
                         return d.index;
                     })
                     .exit()
                     .transition()
-                    .duration(duration)
+                    .duration(radiusChangeDuration)
                     .attr('r', 0)
                     .remove();
             }
         });
 
         d3.select('#submitButton').on('click', function() {
-            console.log(event.target);
 
             var applyFilter = true;
             [min, max].forEach(function(d) {
@@ -299,24 +315,20 @@ function createMap(elementId) {
             });
 
             if(applyFilter) {
-                var keepData = stationsData;
-                if(min.value) {
-                    keepData = keepData.filter(x => x.elevation >= min.value);
+                submittedMin = min.value;
+                submittedMax = max.value;
+                function timeFunction(d) {
+                    return (innerHeight-d.coords[1])*10;
                 }
-                if(max.value) {
-                    keepData = keepData.filter(x => x.elevation <= max.value);
-                }
-                console.log(d3.extent(keepData, function(d) {
-                    return d.elevation;
-                }));
-                console.log(d3.extent(stationsData, function(d) {
-                    return d.coords[1];
-                }));
+
+                var checkedClasses = [class1, class2, class3].filter(x => x.checked).map(x => x.value);
+                var keepData = filterByElevation(stationsData.filter(x => checkedClasses.indexOf(x.class) >= 0));
 
                 var circleSelection = stationGroup
                     .selectAll('circle');
+                var numCircles = circleSelection._groups[0].length;
 
-                if(keepData.length > circleSelection._groups[0].length) {
+                if(keepData.length > numCircles) {
                     var selection = circleSelection
                         .data(keepData, function(d) {
                             return d.index;
@@ -328,29 +340,21 @@ function createMap(elementId) {
 
                     selection
                         .transition()
-                        .duration(function(d) {
-                            return d.coords[1]*50;
-                        })
-                        .delay(function(d) {
-                            return (innerHeight-d.coords[1])*50-10000;
-                        })
+                        .duration(timeFunction)
+                        .delay(timeFunction)
                         .attr('cy', function(d) {
                             return d.coords[1];
                         });
                     
-                } else {
+                } else if (keepData.length < numCircles) {
                     circleSelection
                         .data(keepData, function(d) {
                             return d.index;
                         })
                         .exit()
                         .transition()
-                        .duration(function(d) {
-                            return (innerHeight-d.coords[1])*50;
-                        })
-                        .delay(function(d) {
-                            return (innerHeight-d.coords[1])*50;
-                        })
+                        .duration(timeFunction)
+                        .delay(timeFunction)
                         .attr('cy', innerHeight+100)
                         .remove();
                 }
