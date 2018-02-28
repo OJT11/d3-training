@@ -35,7 +35,7 @@ function createMap(elementId) {
 
         drawLineChart(olympics);
         drawMap(olympics);
-        drawBarChart(olympics);
+        //drawBarChart(olympics);
 
     });
 
@@ -164,42 +164,108 @@ function createMap(elementId) {
             })
             .attr('text-anchor', 'middle');
 
-        // axis labels
-        g
-            .append('text')
-            .attr('class', 'x-axis-label')
-            .attr('x', innerWidth / 2)
-            .attr('y', innerHeight + 30)
-            .attr('text-anchor', 'middle')
-            .attr('dominant-baseline', 'hanging')
-            .text('Number of Medals');
-
-        var xCoord = -40;
-
-        g
-            .append('text')
-            .attr('class', 'y-axis-label')
-            .attr('x', xCoord)
-            .attr('y', innerHeight / 2)
-            .attr('transform', 'rotate(-90,' + xCoord + ',' + innerHeight / 2 + ')')
-            .attr('text-anchor', 'middle')
-            .attr('dominant-baseline', 'baseline')
-            .text('Number of Athletes');
-
-        // title
-        g
-            .append('text')
-            .attr('class', 'title')
-            .attr('x', innerWidth / 2)
-            .attr('y', -20)
-            .attr('text-anchor', 'middle')
-            .attr('dominant-baseline', 'baseline')
-            .style('font-size', 24)
-            .text('Distribution of Medals');
+        // axis labels and chart title
+        addAxisLabels('Number of Medals', 'Number of Athletes', -40);
+        addTitle('Distribution of Medals');
     }
 
     function drawLineChart(olympics) {
         yearlyData = groupDataByYear(olympics);
+
+        var parseTime = d3.timeParse('%Y');
+        yearlyData.forEach(function(d) {
+            d.key = parseTime(d.key);
+            if(isNaN(d.key)) {
+                console.log(d);
+            }
+        });
+
+        // scales
+        var x = d3
+            .scaleTime()
+            .domain(
+                d3.extent(yearlyData, function(d) {
+                    return d.key;
+                })
+            )
+            .range([0, innerWidth]);
+
+        console.log('x scale: ', x.domain(), x.range());
+
+        var y = d3
+            .scaleLinear()
+            .domain(
+                [0,
+                d3.max(yearlyData, function(d) {
+                    return d.value.medalCount;
+                })]
+            )
+            .range([innerHeight, 0]);
+
+        console.log('y scale: ', y.domain(), y.range());
+
+        // axes
+        var xAxis = d3.axisBottom(x).ticks(d3.timeYear.every(4));
+
+        g
+            .append('g')
+            .attr('class', 'x-axis')
+            .attr('transform', 'translate(0,' + innerHeight + ')')
+            .call(xAxis)
+            .selectAll("text")  
+            .style("text-anchor", "end")
+            .attr("transform", "rotate(-90) translate(-10, -12)" );
+
+        var yAxis = d3.axisLeft(y);
+
+        g
+            .append('g')
+            .attr('class', 'y-axis')
+            .call(yAxis);
+
+        // line generator 
+        var line;
+        function generateLine(countType) {
+            line = d3
+                .line()
+                .x(function(d) {
+                    return x(d.key);
+                })
+                .y(function(d) {
+                    return y(d.value[countType]);
+                })
+                .defined(function(d) {
+                    return !isNaN(d.value[countType]);
+                });
+        }
+
+        // lines
+        var lines = ['medalCount', 'athleteCount', 'sportCount', 'eventCount'];
+        
+        var colors = d3.scaleOrdinal(d3.schemeCategory20);
+
+        var groups = g
+            .selectAll('.line')
+            .data(lines)
+            .enter()
+            .append('g')
+            .attr('class', 'line');
+
+        for(var i = 0; i < lines.length; i++) {
+            generateLine(lines[i]);
+            groups
+                .append('path')
+                .datum(yearlyData)
+                .attr('class', 'line')
+                .attr('fill', 'none')
+                .attr('stroke', colors(i))
+                .attr('stroke-width', 2)
+                .attr('d', line);
+        }
+
+        addLegend(lines, colors);
+        addTitle('History of Olympics');
+        addAxisLabels('Time', 'Number', -35);
     }
 
     function groupDataByYear(olympics) {
@@ -273,6 +339,83 @@ function createMap(elementId) {
             .entries(olympics);
 
         console.log("by country", countryRolled);
+    }
+
+    function addTitle(text) {
+        g
+            .append('text')
+            .attr('class', 'title')
+            .attr('x', innerWidth / 2)
+            .attr('y', -20)
+            .attr('text-anchor', 'middle')
+            .attr('dominant-baseline', 'baseline')
+            .style('font-size', 24)
+            .text(text);
+    }
+
+    function addAxisLabels(xLabel, yLabel, xCoord) {
+        g
+            .append('text')
+            .attr('class', 'x-axis-label')
+            .attr('x', innerWidth / 2)
+            .attr('y', innerHeight + 30)
+            .attr('text-anchor', 'middle')
+            .attr('dominant-baseline', 'hanging')
+            .text(xLabel);
+
+        g
+            .append('text')
+            .attr('class', 'y-axis-label')
+            .attr('x', xCoord)
+            .attr('y', innerHeight / 2)
+            .attr('transform', 'rotate(-90,' + xCoord + ',' + innerHeight / 2 + ')')
+            .attr('text-anchor', 'middle')
+            .attr('dominant-baseline', 'baseline')
+            .text(yLabel);
+    }
+
+    function addLegend(lines, colors) {
+        g
+            .append('rect')
+            .attr('class', 'legend')
+            .attr('x', 40)
+            .attr('y', 10)
+            .attr('height', 50)
+            .attr('width', 100)
+            .style('fill', 'none')
+            .style('stroke', 'black');
+
+        g
+            .selectAll('.legend-color')
+            .data(lines)
+            .enter()
+            .append('rect')
+            .attr('class', 'legend-color')
+            .attr('x', 50)
+            .attr('y', function(d) {
+                return lines.indexOf(d) * 10 + 15;
+            })
+            .attr('height', 10)
+            .attr('width', 10)
+            .style('fill', function(d, i) {
+                return colors(i);
+            });
+
+        g
+            .selectAll('.legend-text')
+            .data(lines)
+            .enter()
+            .append('text')
+            .attr('class', 'legend-text')
+            .attr('x', 75)
+            .attr('y', function(d) {
+                return lines.indexOf(d) * 10 + 17;
+            })
+            .attr('dominant-baseline', 'hanging')
+            .text(function(d) {
+                return d;
+            })
+            .style('font-size', 10);
     }
 
     function draw(geoJSONStates, stations) {
