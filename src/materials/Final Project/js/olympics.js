@@ -33,10 +33,39 @@ function createMap(elementId) {
         handleError(error, 'failed to read olympics.csv');
         console.log('raw olympics.csv data: ', olympics);
 
-        drawLineChart(olympics);
-        drawMap(olympics);
-        //drawBarChart(olympics);
+        d3.json('data/countries.json', function(error, geoJSON) {
+            handleError(error, 'failed to read countries.json');
+            console.log('raw countries.json data: ', geoJSON);
 
+            d3.csv('data/country_codes.csv', function(error, countryCodes) {
+                handleError(error, 'failed to read country_codes.csv');
+                console.log('raw country_codes.csv data: ', countryCodes);
+
+                // var rolled = d3.nest()
+                //     .key(function(d) {
+                //         return d.Athlete;
+                //     })
+                //     .key(function(d) {
+                //         return d.Sport;
+                //     })
+                //     .rollup(function(d) {
+                //         return {
+                //             medalCount: d.length
+                //         }
+                //     })
+                //     .entries(olympics);
+
+                // var rolled2.forEach(function(d) {
+                //      d.value.
+                // })
+
+                //console.log("by athlete by sport", rolled);
+
+                //drawLineChart(olympics);
+                drawMap(olympics, geoJSON, countryCodes);
+                //drawBarChart(olympics);  
+        });
+        });
     });
 
     function handleError(error, msg) {
@@ -226,7 +255,7 @@ function createMap(elementId) {
         // line generator 
         var line;
         function generateLine(countType) {
-            line = d3
+            return d3
                 .line()
                 .x(function(d) {
                     return x(d.key);
@@ -242,26 +271,29 @@ function createMap(elementId) {
         // lines
         var lines = ['medalCount', 'athleteCount', 'sportCount', 'eventCount'];
         
-        var colors = d3.scaleOrdinal(d3.schemeCategory20);
+        var colors = d3.scaleOrdinal().domain(lines).range(d3.schemeCategory20);
+        console.log(colors.domain(), colors.range());
+
 
         var groups = g
-            .selectAll('.line')
+            .selectAll('.line-holder')
             .data(lines)
             .enter()
             .append('g')
-            .attr('class', 'line');
+            .attr('class', 'line-holder')
+            .append('path')
+            .datum(yearlyData)
+            .attr('class', 'line')
+            .attr('fill', 'none')
+            .attr('stroke', function(d, i) {
+                return colors(i);
+            })
+            .attr('stroke-width', 2)
+            .attr('d', function(d) {
+                var lineType = d3.select(this.parentNode).datum();
+                return generateLine(lineType)(d);
+            });
 
-        for(var i = 0; i < lines.length; i++) {
-            generateLine(lines[i]);
-            groups
-                .append('path')
-                .datum(yearlyData)
-                .attr('class', 'line')
-                .attr('fill', 'none')
-                .attr('stroke', colors(i))
-                .attr('stroke-width', 2)
-                .attr('d', line);
-        }
 
         addLegend(lines, colors);
         addTitle('History of Olympics');
@@ -326,7 +358,7 @@ function createMap(elementId) {
         return yearMedalRolled;
     }
 
-    function drawMap(olympics) {
+    function drawMap(olympics, geoJSON, countryCodes) {
         countryRolled = d3.nest()
             .key(function(d) {
                 return d.NOC;
@@ -339,6 +371,87 @@ function createMap(elementId) {
             .entries(olympics);
 
         console.log("by country", countryRolled);
+
+        countryRolled.forEach(function(d) {
+            var match = countryCodes.filter(x => x.IOC == d.key);
+            var ISO;
+            if(match[0]) {
+                ISO = match[0].ISO;
+            } else {
+                ISO = null;
+            }
+            d.value.ISO = ISO;
+        });
+
+        console.log("by country with ISO codes", countryRolled);
+
+        var missingGeoData = [];
+        countryRolled.forEach(function(d) {
+            var match = geoJSON.features.filter(x => x.id == d.value.ISO);
+            if(!match[0]) {
+                missingGeoData.push(d.key)
+            } else {
+                ISO = null;
+            }
+        });
+
+        console.log("countries missing geoData", missingGeoData.length, missingGeoData);
+
+        var missingMedalData = [];
+        geoJSON.features.forEach(function(f) {
+            var medals = countryRolled.filter(x => x.value.ISO == f.id);
+            if (medals.length > 0) {
+                f.properties.medals = medals[0].value.medalCount;
+            } else {
+                missingMedalData.push(f.id);
+            }
+        });
+
+        console.log("countries missing medal data", missingMedalData.length, missingMedalData);
+
+        console.log("merged geoJSON", geoJSON);
+
+        var opacityScale = d3
+            .scaleLinear()
+            .domain([0, d3.max(countryRolled, function(d) {
+                return d.value.medalCount;
+            })])
+            .range([0, 1]);
+
+        console.log(opacityScale.domain(), opacityScale.range());
+
+        // projection
+        var mercatorProj = d3
+            .geoMercator()
+            .translate([innerWidth / 2, innerHeight / 2]);
+        var geoPath = d3.geoPath().projection(mercatorProj);
+
+        // map path
+        var mapGroup = g
+            .append('g')
+            .attr('class', 'map-paths');
+        mapGroup
+            .selectAll('path')
+            .data(geoJSON.features)
+            .enter()
+            .append('path')
+            .attr('d', geoPath)
+            .style('fill', function(d) {
+                if (d.properties.medals) {
+                    return 'red';
+                } else {
+                    return 'grey';
+                }
+            })
+            .style('stroke', 'black')
+            .style('stroke-width', 0.5)
+            .attr('fill-opacity', function(d) {
+                if (d.properties.medals) {
+                    return opacityScale(d.properties.medals);
+                } else {
+                    return 1;
+                }
+            });
     }
 
     function addTitle(text) {
