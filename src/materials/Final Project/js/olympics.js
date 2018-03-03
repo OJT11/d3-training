@@ -463,6 +463,13 @@ function createMap(elementId) {
             .data(geoJSON.features)
             .enter()
             .append('path')
+            .attr('id', function(d) {
+                if(d.properties.medals != undefined) {
+                    return d.properties.name + ": " + d.properties.medals + " medals";
+                } else {
+                    return d.properties.name + ": no data available";
+                }
+            })
             .attr('d', geoPath)
             .style('fill', function(d) {
                 if (d.properties.medals) {
@@ -482,6 +489,38 @@ function createMap(elementId) {
             });
 
         addTitle('Medals by Country', mapWidth/2, 0, 20);
+
+        d3.select('.map-paths').on('mouseover', function() {
+            console.log(event);
+            
+            var dataLabel = map
+                .append('text')
+                .attr('class', 'data-label')
+                .attr('x', event.clientX)
+                .attr('y', event.clientY)
+                .text(event.target.id);
+
+            var dataLabelBox = dataLabel.node().getBBox();
+
+            map
+                .append('rect')
+                .attr('x', dataLabelBox.x)
+                .attr('y', dataLabelBox.y)
+                .attr('height', dataLabelBox.height + 2)
+                .attr('width', dataLabelBox.width + 2)
+                .attr('fill', 'white')
+                .attr('fill-opacity', 0.5);
+        });
+
+        d3.select('.map-paths').on('mouseout', function() {
+            map
+                .select('text')
+                .remove();
+
+            map
+                .select('rect')
+                .remove();
+        });
     }
 
     function addTitle(text, x, y, fontSize) {
