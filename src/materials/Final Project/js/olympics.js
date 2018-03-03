@@ -27,6 +27,33 @@ function createMap(elementId) {
         .attr('class', 'svg-group')
         .attr('transform', 'translate(' + margins.left + ',' + margins.top + ')');
 
+    // create groups for each chart
+    var histHeight = 200;
+    var histWidth = 300;
+    var histLeftShift = 800;
+    var histTopShift = 300;
+    var histogram = g
+        .append('g')
+        .attr('class', 'histogram')
+        .attr('transform', 'translate(' + histLeftShift + ',' + histTopShift + ')');
+
+    var lineHeight = 200;
+    var lineWidth = 300;
+    var lineLeftShift = 800;
+    var lineTopShift = 0;
+    var lineChart = g
+        .append('g')
+        .attr('class', 'line-chart')
+        .attr('transform', 'translate(' + lineLeftShift + ',' + lineTopShift + ')');
+
+    var mapHeight = 600;
+    var mapWidth = 600;
+    var map = g
+        .append('g')
+        .attr('class', 'map');
+
+
+    addTitle("Summer Olympics", innerWidth/2, 0, 24);
 
     // read in data
     d3.csv('data/olympics.csv', function(error, olympics) {
@@ -61,9 +88,9 @@ function createMap(elementId) {
 
                 //console.log("by athlete by sport", rolled);
 
-                //drawLineChart(olympics);
+                drawLineChart(olympics);
                 drawMap(olympics, geoJSON, countryCodes);
-                //drawBarChart(olympics);  
+                drawBarChart(olympics);  
         });
         });
     });
@@ -124,7 +151,7 @@ function createMap(elementId) {
         var x = d3
             .scaleBand()
             .domain(rolled2.map(x => x.key))
-            .range([0, innerWidth]);
+            .range([0, histWidth]);
 
         console.log('x scale: ', x.domain(), x.range(), x(2));
 
@@ -136,28 +163,28 @@ function createMap(elementId) {
                     return d.value;
                 })
             ])
-            .range([innerHeight, 0]);
+            .range([histHeight, 0]);
 
         console.log('y scale: ', y.domain(), y.range());
 
         // axes
         var xAxis = d3.axisBottom(x);
 
-        g
+        histogram
             .append('g')
             .attr('class', 'x-axis')
-            .attr('transform', 'translate(0,' + innerHeight + ')')
+            .attr('transform', 'translate(0,' + histHeight + ')')
             .call(xAxis);
 
         var yAxis = d3.axisLeft(y);
 
-        g
+        histogram
             .append('g')
             .attr('class', 'y-axis')
             .call(yAxis);
         
         // bars
-        g
+        histogram
             .selectAll('.bar')
             .data(rolled2)
             .enter()
@@ -171,12 +198,12 @@ function createMap(elementId) {
             })
             .attr('width', x.bandwidth)
             .attr('height', function(d) {
-                return innerHeight - y(d.value);
+                return histHeight - y(d.value);
             })
             .attr('fill', 'purple');
 
         // data labels
-        g
+        histogram
             .selectAll('.label')
             .data(rolled2)
             .enter()
@@ -194,8 +221,8 @@ function createMap(elementId) {
             .attr('text-anchor', 'middle');
 
         // axis labels and chart title
-        addAxisLabels('Number of Medals', 'Number of Athletes', -40);
-        addTitle('Distribution of Medals');
+        addAxisLabels('Number of Medals', histWidth/2 + histLeftShift, histHeight + histTopShift, 'Number of Athletes', histLeftShift-50, histHeight/2 + histTopShift);
+        addTitle('Distribution of Medals', histWidth/2 + histLeftShift, histTopShift, 20);
     }
 
     function drawLineChart(olympics) {
@@ -217,7 +244,7 @@ function createMap(elementId) {
                     return d.key;
                 })
             )
-            .range([0, innerWidth]);
+            .range([0, lineWidth]);
 
         console.log('x scale: ', x.domain(), x.range());
 
@@ -229,17 +256,17 @@ function createMap(elementId) {
                     return d.value.medalCount;
                 })]
             )
-            .range([innerHeight, 0]);
+            .range([lineHeight, 0]);
 
         console.log('y scale: ', y.domain(), y.range());
 
         // axes
         var xAxis = d3.axisBottom(x).ticks(d3.timeYear.every(4));
 
-        g
+        lineChart
             .append('g')
             .attr('class', 'x-axis')
-            .attr('transform', 'translate(0,' + innerHeight + ')')
+            .attr('transform', 'translate(0,' + lineHeight + ')')
             .call(xAxis)
             .selectAll("text")  
             .style("text-anchor", "end")
@@ -247,7 +274,7 @@ function createMap(elementId) {
 
         var yAxis = d3.axisLeft(y);
 
-        g
+        lineChart
             .append('g')
             .attr('class', 'y-axis')
             .call(yAxis);
@@ -275,7 +302,7 @@ function createMap(elementId) {
         console.log(colors.domain(), colors.range());
 
 
-        var groups = g
+        var groups = lineChart
             .selectAll('.line-holder')
             .data(lines)
             .enter()
@@ -296,8 +323,8 @@ function createMap(elementId) {
 
 
         addLegend(lines, colors);
-        addTitle('History of Olympics');
-        addAxisLabels('Time', 'Number', -35);
+        addTitle('History of Olympics', lineWidth/2 + lineLeftShift, lineTopShift, 20);
+        addAxisLabels('Time', lineWidth/2 + lineLeftShift, lineHeight + 10, 'Number', lineLeftShift-40, lineHeight/2 + lineTopShift);
     }
 
     function groupDataByYear(olympics) {
@@ -423,11 +450,12 @@ function createMap(elementId) {
         // projection
         var mercatorProj = d3
             .geoMercator()
-            .translate([innerWidth / 2, innerHeight / 2]);
+            .scale(100)
+            .translate([mapWidth / 2, mapHeight / 2]);
         var geoPath = d3.geoPath().projection(mercatorProj);
 
         // map path
-        var mapGroup = g
+        var mapGroup = map
             .append('g')
             .attr('class', 'map-paths');
         mapGroup
@@ -452,26 +480,28 @@ function createMap(elementId) {
                     return 1;
                 }
             });
+
+        addTitle('Medals by Country', mapWidth/2, 0, 20);
     }
 
-    function addTitle(text) {
+    function addTitle(text, x, y, fontSize) {
         g
             .append('text')
             .attr('class', 'title')
-            .attr('x', innerWidth / 2)
-            .attr('y', -20)
+            .attr('x', x)
+            .attr('y', y-20)
             .attr('text-anchor', 'middle')
             .attr('dominant-baseline', 'baseline')
-            .style('font-size', 24)
+            .style('font-size', fontSize)
             .text(text);
     }
 
-    function addAxisLabels(xLabel, yLabel, xCoord) {
+    function addAxisLabels(xLabel, xLabelX, xLabelY, yLabel, yLabelX, yLabelY) {
         g
             .append('text')
             .attr('class', 'x-axis-label')
-            .attr('x', innerWidth / 2)
-            .attr('y', innerHeight + 30)
+            .attr('x', xLabelX)
+            .attr('y', xLabelY + 30)
             .attr('text-anchor', 'middle')
             .attr('dominant-baseline', 'hanging')
             .text(xLabel);
@@ -479,16 +509,16 @@ function createMap(elementId) {
         g
             .append('text')
             .attr('class', 'y-axis-label')
-            .attr('x', xCoord)
-            .attr('y', innerHeight / 2)
-            .attr('transform', 'rotate(-90,' + xCoord + ',' + innerHeight / 2 + ')')
+            .attr('x', yLabelX)
+            .attr('y', yLabelY)
+            .attr('transform', 'rotate(-90,' + yLabelX + ',' + yLabelY + ')')
             .attr('text-anchor', 'middle')
             .attr('dominant-baseline', 'baseline')
             .text(yLabel);
     }
 
     function addLegend(lines, colors) {
-        g
+        lineChart
             .append('rect')
             .attr('class', 'legend')
             .attr('x', 40)
@@ -498,7 +528,7 @@ function createMap(elementId) {
             .style('fill', 'none')
             .style('stroke', 'black');
 
-        g
+        lineChart
             .selectAll('.legend-color')
             .data(lines)
             .enter()
@@ -514,7 +544,7 @@ function createMap(elementId) {
                 return colors(i);
             });
 
-        g
+        lineChart
             .selectAll('.legend-text')
             .data(lines)
             .enter()
