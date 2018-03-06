@@ -220,6 +220,43 @@ function createMap(elementId) {
             })
             .attr('text-anchor', 'middle');
 
+        // filter
+        // options
+        var formGroup = d3.select('body')
+            .append('form')
+            .attr('id', 'form')
+            .style('position', 'relative')
+            .style('top', '-35%')
+            .style('left', '160%');
+
+        var options = ["All", "Females", "Males"];
+
+        formGroup
+            .selectAll('.radio')
+            .data(options)
+            .enter()
+            .append('div')
+            .attr('class', 'radio')
+            .append('input')
+            .attr('type', 'radio')
+            .attr('name', 'group')
+            .attr('value', function(d) {
+                return d;
+            })
+            .attr('id', function(d) {
+                return d;
+            });
+
+        d3.select("#All")
+            .attr('checked', true);
+
+        formGroup
+            .selectAll('.radio')
+            .append('label')
+            .text(function(d) {
+                return d;
+            });
+
         // axis labels and chart title
         addAxisLabels('Number of Medals', histWidth/2 + histLeftShift, histHeight + histTopShift, 'Number of Athletes', histLeftShift-50, histHeight/2 + histTopShift);
         addTitle('Distribution of Medals', histWidth/2 + histLeftShift, histTopShift, 20);
