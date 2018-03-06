@@ -495,7 +495,7 @@ function createMap(elementId) {
             
             var dataLabel = map
                 .append('text')
-                .attr('class', 'data-label')
+                .attr('id', 'data-label-text')
                 .attr('x', event.clientX)
                 .attr('y', event.clientY)
                 .text(event.target.id);
@@ -504,6 +504,7 @@ function createMap(elementId) {
 
             map
                 .append('rect')
+                .attr('id', 'data-label-background')
                 .attr('x', dataLabelBox.x)
                 .attr('y', dataLabelBox.y)
                 .attr('height', dataLabelBox.height + 2)
@@ -514,13 +515,56 @@ function createMap(elementId) {
 
         d3.select('.map-paths').on('mouseout', function() {
             map
-                .select('text')
+                .select('#data-label-text')
                 .remove();
 
             map
-                .select('rect')
+                .select('#data-label-background')
                 .remove();
         });
+
+
+        // legend
+        // colors
+        var defs = map.append("defs");
+
+        var linearGradient = defs.append("linearGradient")
+            .attr("id", "gradient")
+            .attr("x1", "0%")
+            .attr("y1", "0%")
+            .attr("x2", "100%")
+            .attr("y2", "0%");
+        linearGradient
+            .append("stop")
+            .attr("offset", "0%")
+            .attr("stop-color", "white");
+        linearGradient
+            .append("stop")
+            .attr("offset", "100%")
+            .attr("stop-color", "red")
+
+        var legendHeight = 10;
+        var legendWidth = 100;
+
+        map.append("rect")
+            .attr("width", legendWidth)
+            .attr("height", legendHeight)
+            .attr("fill", "url(#gradient)");
+
+        // labels
+        map.append("text")
+            .attr("id", "min")
+            .attr("y", legendHeight)
+            .attr("text-anchor", "end")
+            .text(0);
+        map.append("text")
+            .attr("id", "max")
+            .attr("x", legendWidth)
+            .attr("y", legendHeight)
+            .attr("text-anchor", "start")
+            .text(d3.max(geoJSON.features, function(d) {
+                return d.properties.medals;
+            }));
     }
 
     function addTitle(text, x, y, fontSize) {
