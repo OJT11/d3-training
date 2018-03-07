@@ -186,6 +186,8 @@ function createMap(elementId) {
 
         console.log(countryOpacityScale.domain(), countryOpacityScale.range());
 
+        var squareColor = "purple";
+
         // squares
         country
             .selectAll('.square')
@@ -206,7 +208,7 @@ function createMap(elementId) {
             })
             .attr('width', x.bandwidth)
             .attr('height', y.bandwidth)
-            .attr('fill', 'purple')
+            .attr('fill', squareColor)
             .attr('fill-opacity', function(d) {
                 return countryOpacityScale(d.medals);
             })
@@ -221,7 +223,7 @@ function createMap(elementId) {
         });
 
         if(singleCountry.length > 0) {
-            addGradientLegend(country, countryWidth, maxCountryMedals, "purple");
+            addGradientLegend(country, countryWidth, maxCountryMedals, squareColor);
         }  
 
         // need axis labels?
@@ -661,6 +663,8 @@ function createMap(elementId) {
         var geoPath = d3.geoPath().projection(mercatorProj);
 
         // map path
+        var mapColor = "red";
+
         var mapGroup = map
             .append('g')
             .attr('class', 'map-paths');
@@ -679,7 +683,7 @@ function createMap(elementId) {
             .attr('d', geoPath)
             .style('fill', function(d) {
                 if (d.properties.medals) {
-                    return 'red';
+                    return mapColor;
                 } else {
                     return 'grey';
                 }
@@ -709,17 +713,14 @@ function createMap(elementId) {
         d3.select('.map-paths').on('click', function() {
             console.log(event.target);
             removeOldCharts();
-            var country = geoJSON.features.filter(x => x.properties.name == event.target.id.split(":")[0])[0];
-            console.log("current country", country);
-            // send back NOC code
-            // handle case of no match
-            drawCountryChart(olympics, country);
+            var countryClicked = geoJSON.features.filter(x => x.properties.name == event.target.id.split(":")[0])[0];
+            drawCountryChart(olympics, countryClicked);
         });
 
         // legend
         addGradientLegend(map, mapWidth, d3.max(geoJSON.features, function(d) {
                 return d.properties.medals;
-        }), "red");
+        }), mapColor);
     }
 
     function removeOldCharts() {
