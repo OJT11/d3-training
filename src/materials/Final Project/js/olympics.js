@@ -54,9 +54,12 @@ function createMap(elementId) {
 
     var countryHeight = 300;
     var countryWidth = 600;
+    var countryTopShift = 0;
+    var countryLeftShift = 800;
     var country = g
         .append('g')
-        .attr('class', 'country-chart');
+        .attr('class', 'country-chart')
+        .attr('transform', 'translate(' + countryLeftShift + ',' + countryTopShift + ')');
 
 
     addTitle("Summer Olympics", innerWidth/2, 0, 24);
@@ -197,6 +200,9 @@ function createMap(elementId) {
             .enter()
             .append('rect')
             .attr('class', 'square')
+            .attr('id', function(d) {
+                return d.sport + "," + d.year + ": " + d.medals + " medal(s)";
+            })
             .attr('x', function(d) {
                 //console.log(d.year);
                 return x(d.year);
@@ -212,6 +218,22 @@ function createMap(elementId) {
                 return countryOpacityScale(d.medals);
             })
             .attr('stroke', 'black');
+
+        d3.select('.country-chart').on('mouseover', function() {
+            showDataLabel(country, event);
+        });
+
+        d3.select('.country-chart').on('mouseout', function() {
+            hideDataLabel(country);
+        });
+
+        // add legend
+        // add country dropdown
+        // rotate x-axis tick marks
+
+        // chart title
+        // need axis labels?
+        addTitle('Breakdown of Medals', countryWidth/2 + countryLeftShift, countryTopShift, 20);
     }
 
     function drawBarChart(olympics) {
@@ -647,7 +669,7 @@ function createMap(elementId) {
             .append('path')
             .attr('id', function(d) {
                 if(d.properties.medals != undefined) {
-                    return d.properties.name + ": " + d.properties.medals + " medals";
+                    return d.properties.name + ": " + d.properties.medals + " medal(s)";
                 } else {
                     return d.properties.name + ": no data available";
                 }
@@ -673,36 +695,11 @@ function createMap(elementId) {
         addTitle('Medals by Country', mapWidth/2, 0, 20);
 
         d3.select('.map-paths').on('mouseover', function() {
-            //console.log(event);
-            
-            var dataLabel = map
-                .append('text')
-                .attr('id', 'data-label-text')
-                .attr('x', event.clientX)
-                .attr('y', event.clientY)
-                .text(event.target.id);
-
-            var dataLabelBox = dataLabel.node().getBBox();
-
-            map
-                .append('rect')
-                .attr('id', 'data-label-background')
-                .attr('x', dataLabelBox.x)
-                .attr('y', dataLabelBox.y)
-                .attr('height', dataLabelBox.height + 2)
-                .attr('width', dataLabelBox.width + 2)
-                .attr('fill', 'white')
-                .attr('fill-opacity', 0.5);
+            showDataLabel(map, event);
         });
 
         d3.select('.map-paths').on('mouseout', function() {
-            map
-                .select('#data-label-text')
-                .remove();
-
-            map
-                .select('#data-label-background')
-                .remove();
+            hideDataLabel(map);
         });
 
 
@@ -747,6 +744,39 @@ function createMap(elementId) {
             .text(d3.max(geoJSON.features, function(d) {
                 return d.properties.medals;
             }));
+    }
+
+    function showDataLabel(chart, event) {
+        console.log(event);
+
+        var dataLabel = chart
+                .append('text')
+                .attr('id', 'data-label-text')
+                .attr('x', event.clientX)
+                .attr('y', event.clientY)
+                .text(event.target.id);
+
+        var dataLabelBox = dataLabel.node().getBBox();
+
+        chart
+            .append('rect')
+            .attr('id', 'data-label-background')
+            .attr('x', dataLabelBox.x)
+            .attr('y', dataLabelBox.y)
+            .attr('height', dataLabelBox.height + 2)
+            .attr('width', dataLabelBox.width + 2)
+            .attr('fill', 'white')
+            .attr('fill-opacity', 0.5);
+    }
+
+    function hideDataLabel(chart) {
+        chart
+            .select('#data-label-text')
+            .remove();
+
+        chart
+            .select('#data-label-background')
+            .remove();
     }
 
     function addTitle(text, x, y, fontSize) {
