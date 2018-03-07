@@ -28,14 +28,7 @@ function createMap(elementId) {
         .attr('transform', 'translate(' + margins.left + ',' + margins.top + ')');
 
     // create groups for each chart
-    var histHeight = 200;
-    var histWidth = 300;
-    var histLeftShift = 800;
-    var histTopShift = 300;
-    var histogram = g
-        .append('g')
-        .attr('class', 'histogram')
-        .attr('transform', 'translate(' + histLeftShift + ',' + histTopShift + ')');
+    
 
     var lineHeight = 200;
     var lineWidth = 300;
@@ -70,6 +63,14 @@ function createMap(elementId) {
                 drawLineChart(olympics);
                 drawMap(olympics, geoJSON, countryCodes);
                 drawBarChart(olympics);
+
+                d3.select('svg').on('click', function() {
+                    //console.log(event.target);
+                    if(event.target.id == "") {
+                        removeOldCharts();
+                        drawBarChart(olympics);
+                    }
+                });
             });
         });
     });
@@ -221,11 +222,9 @@ function createMap(elementId) {
 
         addGradientLegend(country, countryWidth, maxCountryMedals, "purple");
 
-        // add country dropdown
-
         // chart title
         // need axis labels?
-        addTitle(country, 'Breakdown of Medals', countryWidth, 20);
+        addTitle(country, 'Breakdown of Medals: ' + singleCountry[0].country, countryWidth, 20);
     }
 
     function drawBarChart(olympics) {
@@ -278,6 +277,15 @@ function createMap(elementId) {
           }
           return 0;
         }
+
+        var histHeight = 200;
+        var histWidth = 300;
+        var histLeftShift = 800;
+        var histTopShift = 300;
+        var histogram = g
+            .append('g')
+            .attr('class', 'histogram')
+            .attr('transform', 'translate(' + histLeftShift + ',' + histTopShift + ')');
 
         // scales
         var x = d3
@@ -698,9 +706,7 @@ function createMap(elementId) {
         // breakdown of medals
         d3.select('.map-paths').on('click', function() {
             console.log(event.target);
-            d3.select('.histogram').remove();
-            d3.selectAll('.country-chart').remove();
-            d3.select('#form').remove();
+            removeOldCharts();
             var country = geoJSON.features.filter(x => x.properties.name == event.target.id.split(":")[0])[0].id;
             console.log(country);
             // send back NOC code
@@ -712,6 +718,12 @@ function createMap(elementId) {
         addGradientLegend(map, mapWidth, d3.max(geoJSON.features, function(d) {
                 return d.properties.medals;
         }), "red");
+    }
+
+    function removeOldCharts() {
+        d3.select('.country-chart').remove();
+        d3.select('.histogram').remove();
+        d3.select('#form').remove();
     }
 
     function showDataLabel(chart, event) {
@@ -849,7 +861,7 @@ function createMap(elementId) {
         var legendHeight = 10;
         var legendWidth = 100;
         var legendX = (chartWidth-legendWidth)/2;
-        var topShift = -10;
+        var topShift = -15;
 
         chart.append("rect")
             .attr("x", legendX)
