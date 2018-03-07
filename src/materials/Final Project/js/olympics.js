@@ -52,7 +52,7 @@ function createMap(elementId) {
         .append('g')
         .attr('class', 'map');
 
-    addTitle("Summer Olympics", innerWidth/2, 0, 24);
+    addTitle(g, "Summer Olympics", innerWidth, 24);
 
     // read in data
     d3.csv('data/olympics.csv', function(error, olympics) {
@@ -215,7 +215,7 @@ function createMap(elementId) {
 
         // chart title
         // need axis labels?
-        addTitle('Breakdown of Medals', countryWidth/2 + countryLeftShift, countryTopShift, 20);
+        addTitle(country, 'Breakdown of Medals', countryWidth, 20);
     }
 
     function drawBarChart(olympics) {
@@ -407,8 +407,8 @@ function createMap(elementId) {
         });
 
         // axis labels and chart title
-        addAxisLabels('Number of Medals', histWidth/2 + histLeftShift, histHeight + histTopShift, 'Number of Athletes', histLeftShift-50, histHeight/2 + histTopShift);
-        addTitle('Distribution of Medals', histWidth/2 + histLeftShift, histTopShift, 20);
+        addAxisLabels(histogram, 'Number of Medals', 'Number of Athletes', histWidth, histHeight+25);
+        addTitle(histogram, 'Distribution of Medals', histWidth, 20);
     }
 
     function drawLineChart(olympics) {
@@ -509,8 +509,8 @@ function createMap(elementId) {
 
 
         addLineLegend(lines, colors);
-        addTitle('History of Olympics', lineWidth/2 + lineLeftShift, lineTopShift, 20);
-        addAxisLabels('Time', lineWidth/2 + lineLeftShift, lineHeight + 10, 'Number', lineLeftShift-40, lineHeight/2 + lineTopShift);
+        addTitle(lineChart, 'History of Olympics', lineWidth, 20);
+        addAxisLabels(lineChart, 'Time', 'Number', lineWidth, lineHeight+40);
     }
 
     function groupDataByYear(olympics) {
@@ -674,7 +674,7 @@ function createMap(elementId) {
                 }
             });
 
-        addTitle('Medals by Country', mapWidth/2, 0, 20);
+        addTitle(map, 'Medals by Country', mapWidth, 20);
 
         // data labels
         d3.select('.map-paths').on('mouseover', function() {
@@ -737,34 +737,37 @@ function createMap(elementId) {
             .remove();
     }
 
-    function addTitle(text, x, y, fontSize) {
-        g
+    function addTitle(chart, text, chartWidth, fontSize) {
+        chart
             .append('text')
             .attr('class', 'title')
-            .attr('x', x)
-            .attr('y', y-20)
+            .attr('x', chartWidth/2)
+            .attr('y', -20)
             .attr('text-anchor', 'middle')
             .attr('dominant-baseline', 'baseline')
             .style('font-size', fontSize)
             .text(text);
     }
 
-    function addAxisLabels(xLabel, xLabelX, xLabelY, yLabel, yLabelX, yLabelY) {
-        g
+    function addAxisLabels(chart, xLabel, yLabel, chartWidth, chartHeight) {
+        chart
             .append('text')
             .attr('class', 'x-axis-label')
-            .attr('x', xLabelX)
-            .attr('y', xLabelY + 30)
+            .attr('x', chartWidth/2)
+            .attr('y', chartHeight)
             .attr('text-anchor', 'middle')
             .attr('dominant-baseline', 'hanging')
             .text(xLabel);
 
-        g
+        var x = -45;
+        var y = chartHeight/2-20;
+
+        chart
             .append('text')
             .attr('class', 'y-axis-label')
-            .attr('x', yLabelX)
-            .attr('y', yLabelY)
-            .attr('transform', 'rotate(-90,' + yLabelX + ',' + yLabelY + ')')
+            .attr('x', x)
+            .attr('y', y)
+            .attr('transform', 'rotate(-90,' + x + ',' + y + ')')
             .attr('text-anchor', 'middle')
             .attr('dominant-baseline', 'baseline')
             .text(yLabel);
