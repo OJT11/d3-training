@@ -163,12 +163,13 @@ function createMap(elementId) {
             .call(yAxis);
 
         var singleCountry = newArray.filter(x => x.country == "HUN");
+        var maxCountryMedals = d3.max(singleCountry, function(d) {
+            return d.medals;
+        });
 
         var countryOpacityScale = d3
             .scaleLinear()
-            .domain([0, d3.max(singleCountry, function(d) {
-                return d.medals;
-            })])
+            .domain([0, maxCountryMedals])
             .range([0, 1]);
 
         console.log(countryOpacityScale.domain(), countryOpacityScale.range());
@@ -207,7 +208,8 @@ function createMap(elementId) {
             hideDataLabel(country);
         });
 
-        // add legend
+        addGradientLegend(country, maxCountryMedals, "purple");
+
         // add country dropdown
         // rotate x-axis tick marks
 
@@ -506,7 +508,7 @@ function createMap(elementId) {
             });
 
 
-        addLegend(lines, colors);
+        addLineLegend(lines, colors);
         addTitle('History of Olympics', lineWidth/2 + lineLeftShift, lineTopShift, 20);
         addAxisLabels('Time', lineWidth/2 + lineLeftShift, lineHeight + 10, 'Number', lineLeftShift-40, lineHeight/2 + lineTopShift);
     }
@@ -682,48 +684,10 @@ function createMap(elementId) {
             hideDataLabel(map);
         });
 
-
         // legend
-        // colors
-        var defs = map.append("defs");
-
-        var linearGradient = defs.append("linearGradient")
-            .attr("id", "gradient")
-            .attr("x1", "0%")
-            .attr("y1", "0%")
-            .attr("x2", "100%")
-            .attr("y2", "0%");
-        linearGradient
-            .append("stop")
-            .attr("offset", "0%")
-            .attr("stop-color", "white");
-        linearGradient
-            .append("stop")
-            .attr("offset", "100%")
-            .attr("stop-color", "red")
-
-        var legendHeight = 10;
-        var legendWidth = 100;
-
-        map.append("rect")
-            .attr("width", legendWidth)
-            .attr("height", legendHeight)
-            .attr("fill", "url(#gradient)");
-
-        // labels
-        map.append("text")
-            .attr("id", "min")
-            .attr("y", legendHeight)
-            .attr("text-anchor", "end")
-            .text(0);
-        map.append("text")
-            .attr("id", "max")
-            .attr("x", legendWidth)
-            .attr("y", legendHeight)
-            .attr("text-anchor", "start")
-            .text(d3.max(geoJSON.features, function(d) {
+        addGradientLegend(map, d3.max(geoJSON.features, function(d) {
                 return d.properties.medals;
-            }));
+        }), "red");
     }
 
     function showDataLabel(chart, event) {
@@ -792,7 +756,7 @@ function createMap(elementId) {
             .text(yLabel);
     }
 
-    function addLegend(lines, colors) {
+    function addLineLegend(lines, colors) {
         lineChart
             .append('rect')
             .attr('class', 'legend')
@@ -835,6 +799,47 @@ function createMap(elementId) {
             })
             .style('font-size', 10);
     };
+
+    function addGradientLegend(chart, maxValue, color) {
+        // colors
+        var defs = chart.append("defs");
+
+        var linearGradient = defs.append("linearGradient")
+            .attr("id", "gradient-" + color)
+            .attr("x1", "0%")
+            .attr("y1", "0%")
+            .attr("x2", "100%")
+            .attr("y2", "0%");
+        linearGradient
+            .append("stop")
+            .attr("offset", "0%")
+            .attr("stop-color", "white");
+        linearGradient
+            .append("stop")
+            .attr("offset", "100%")
+            .attr("stop-color", color)
+
+        var legendHeight = 10;
+        var legendWidth = 100;
+
+        chart.append("rect")
+            .attr("width", legendWidth)
+            .attr("height", legendHeight)
+            .attr("fill", "url(#gradient-" + color + ")");
+
+        // labels
+        chart.append("text")
+            .attr("id", "min")
+            .attr("y", legendHeight)
+            .attr("text-anchor", "end")
+            .text(0);
+        chart.append("text")
+            .attr("id", "max")
+            .attr("x", legendWidth)
+            .attr("y", legendHeight)
+            .attr("text-anchor", "start")
+            .text(maxValue);
+    }
 
 };
 
