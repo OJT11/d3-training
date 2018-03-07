@@ -108,7 +108,8 @@ function createMap(elementId) {
             })
             .rollup(function(d) {
                 return {
-                    medalCount: d.length
+                    medalCount: d.length,
+                    gender: d[0].Gender
                 }
             })
             .entries(olympics);
@@ -127,7 +128,11 @@ function createMap(elementId) {
                 return d.value.medalCount;
             })
             .rollup(function(d, i) {
-                return d.length;
+                return {
+                    All: d.length,
+                    Males: d.filter(x => x.value.gender == "Men").length,
+                    Females: d.filter(x => x.value.gender == "Women").length
+                };
             })
             .entries(rolled);
 
@@ -160,7 +165,7 @@ function createMap(elementId) {
             .domain([
                 0,
                 d3.max(rolled2, function(d) {
-                    return d.value;
+                    return d.value.All;
                 })
             ])
             .range([histHeight, 0]);
@@ -194,11 +199,11 @@ function createMap(elementId) {
                 return x(d.key);
             })
             .attr('y', function(d) {
-                return y(d.value);
+                return y(d.value.All);
             })
             .attr('width', x.bandwidth)
             .attr('height', function(d) {
-                return histHeight - y(d.value);
+                return histHeight - y(d.value.All);
             })
             .attr('fill', 'purple');
 
@@ -213,12 +218,13 @@ function createMap(elementId) {
                 return x(d.key) + x(2)/2;
             })
             .attr('y', function(d) {
-                return y(d.value) - 10;
+                return y(d.value.All) - 10;
             })
             .text(function(d) {
-                return d.value;
+                return d.value.All;
             })
-            .attr('text-anchor', 'middle');
+            .attr('text-anchor', 'middle')
+            .attr('font-size', 10);
 
         // filter
         // options
@@ -227,7 +233,7 @@ function createMap(elementId) {
             .attr('id', 'form')
             .style('position', 'relative')
             .style('top', '-35%')
-            .style('left', '160%');
+            .style('left', '130%');
 
         var options = ["All", "Females", "Males"];
 
@@ -256,6 +262,32 @@ function createMap(elementId) {
             .text(function(d) {
                 return d;
             });
+
+        // functionality
+        d3.select('#form').on('click', function() {
+
+            // change axes?
+
+            //bars
+            histogram
+                .selectAll('.bar')
+                .attr('y', function(d) {
+                    return y(d.value[event.target.id]);
+                })
+                .attr('height', function(d) {
+                    return histHeight - y(d.value[event.target.id]);
+                });
+
+            // data labels
+            histogram
+                .selectAll('.label')
+                .attr('y', function(d) {
+                    return y(d.value[event.target.id]) - 10;
+                })
+                .text(function(d) {
+                    return d.value[event.target.id];
+                });
+        });
 
         // axis labels and chart title
         addAxisLabels('Number of Medals', histWidth/2 + histLeftShift, histHeight + histTopShift, 'Number of Athletes', histLeftShift-50, histHeight/2 + histTopShift);
