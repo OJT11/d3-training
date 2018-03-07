@@ -174,7 +174,7 @@ function createMap(elementId) {
             .attr('class', 'y-axis')
             .call(yAxis);
 
-        var singleCountry = newArray.filter(x => x.country == countryClicked);
+        var singleCountry = newArray.filter(x => x.country == countryClicked.properties.IOC);
         var maxCountryMedals = d3.max(singleCountry, function(d) {
             return d.medals;
         });
@@ -220,11 +220,12 @@ function createMap(elementId) {
             hideDataLabel(country);
         });
 
-        addGradientLegend(country, countryWidth, maxCountryMedals, "purple");
+        if(singleCountry.length > 0) {
+            addGradientLegend(country, countryWidth, maxCountryMedals, "purple");
+        }  
 
-        // chart title
         // need axis labels?
-        addTitle(country, 'Breakdown of Medals: ' + singleCountry[0].country, countryWidth, 20);
+        addTitle(country, 'Medal Breakdown: ' + countryClicked.properties.name, countryWidth, 20);
     }
 
     function drawBarChart(olympics) {
@@ -632,6 +633,7 @@ function createMap(elementId) {
         geoJSON.features.forEach(function(f) {
             var medals = countryRolled.filter(x => x.value.ISO == f.id);
             if (medals.length > 0) {
+                f.properties.IOC = medals[0].key;
                 f.properties.medals = medals[0].value.medalCount;
             } else {
                 missingMedalData.push(f.id);
@@ -707,8 +709,8 @@ function createMap(elementId) {
         d3.select('.map-paths').on('click', function() {
             console.log(event.target);
             removeOldCharts();
-            var country = geoJSON.features.filter(x => x.properties.name == event.target.id.split(":")[0])[0].id;
-            console.log(country);
+            var country = geoJSON.features.filter(x => x.properties.name == event.target.id.split(":")[0])[0];
+            console.log("current country", country);
             // send back NOC code
             // handle case of no match
             drawCountryChart(olympics, country);
