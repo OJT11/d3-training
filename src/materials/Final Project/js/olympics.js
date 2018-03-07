@@ -52,16 +52,6 @@ function createMap(elementId) {
         .append('g')
         .attr('class', 'map');
 
-    var countryHeight = 300;
-    var countryWidth = 600;
-    var countryTopShift = 0;
-    var countryLeftShift = 800;
-    var country = g
-        .append('g')
-        .attr('class', 'country-chart')
-        .attr('transform', 'translate(' + countryLeftShift + ',' + countryTopShift + ')');
-
-
     addTitle("Summer Olympics", innerWidth/2, 0, 24);
 
     // read in data
@@ -80,7 +70,6 @@ function createMap(elementId) {
                 drawLineChart(olympics);
                 drawMap(olympics, geoJSON, countryCodes);
                 drawBarChart(olympics);
-                drawCountryChart(olympics);
             });
         });
     });
@@ -91,7 +80,7 @@ function createMap(elementId) {
         }
     }
 
-    function drawCountryChart(olympics) {
+    function drawCountryChart(olympics, countryClicked) {
         var rolled = d3.nest()
             .key(function(d) {
                 return d.NOC;
@@ -131,6 +120,15 @@ function createMap(elementId) {
 
         console.log("by country, year, sport, clean", newArray);
 
+        var countryHeight = 300;
+        var countryWidth = 300;
+        var countryTopShift = 300;
+        var countryLeftShift = 800;
+        var country = g
+            .append('g')
+            .attr('class', 'country-chart')
+            .attr('transform', 'translate(' + countryLeftShift + ',' + countryTopShift + ')');
+
         // scales
         var x = d3
             .scaleBand()
@@ -153,7 +151,10 @@ function createMap(elementId) {
             .append('g')
             .attr('class', 'x-axis')
             .attr('transform', 'translate(0,' + countryHeight + ')')
-            .call(xAxis);
+            .call(xAxis)
+            .selectAll("text")  
+            .style("text-anchor", "end")
+            .attr("transform", "rotate(-90) translate(-10, -12)");
 
         var yAxis = d3.axisLeft(y);
 
@@ -162,7 +163,7 @@ function createMap(elementId) {
             .attr('class', 'y-axis')
             .call(yAxis);
 
-        var singleCountry = newArray.filter(x => x.country == "HUN");
+        var singleCountry = newArray.filter(x => x.country == countryClicked);
         var maxCountryMedals = d3.max(singleCountry, function(d) {
             return d.medals;
         });
@@ -211,7 +212,6 @@ function createMap(elementId) {
         addGradientLegend(country, maxCountryMedals, "purple");
 
         // add country dropdown
-        // rotate x-axis tick marks
 
         // chart title
         // need axis labels?
@@ -676,12 +676,26 @@ function createMap(elementId) {
 
         addTitle('Medals by Country', mapWidth/2, 0, 20);
 
+        // data labels
         d3.select('.map-paths').on('mouseover', function() {
             showDataLabel(map, event);
         });
 
         d3.select('.map-paths').on('mouseout', function() {
             hideDataLabel(map);
+        });
+
+        // breakdown of medals
+        d3.select('.map-paths').on('click', function() {
+            console.log(event.target);
+            d3.select('.histogram').remove();
+            d3.selectAll('.country-chart').remove();
+            d3.select('#form').remove();
+            var country = geoJSON.features.filter(x => x.properties.name == event.target.id.split(":")[0])[0].id;
+            console.log(country);
+            // send back NOC code
+            // handle case of no match
+            drawCountryChart(olympics, country);
         });
 
         // legend
@@ -691,7 +705,7 @@ function createMap(elementId) {
     }
 
     function showDataLabel(chart, event) {
-        console.log(event);
+        //console.log(event);
 
         var dataLabel = chart
                 .append('text')
