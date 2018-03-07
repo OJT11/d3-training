@@ -1,7 +1,7 @@
 function createMap(elementId) {
 
     // svg height, width, and inside margins
-    var height = 600;
+    var height = 700;
     var width = 1325;
     var margins = {
         top: 50,
@@ -137,9 +137,19 @@ function createMap(elementId) {
 
         console.log('x scale: ', x.domain(), x.range());
 
+        function compareSports(a, b) {
+          if (a < b) {
+            return 1;
+          }
+          if (a > b) {
+            return -1;
+          }
+          return 0;
+        }
+
         var y = d3
             .scaleBand()
-            .domain(olympics.map(x => x.Sport))
+            .domain(olympics.map(x => x.Sport).sort(compareSports))
             .range([countryHeight, 0]);
 
         console.log('y scale: ', y.domain(), y.range());
@@ -209,7 +219,7 @@ function createMap(elementId) {
             hideDataLabel(country);
         });
 
-        addGradientLegend(country, maxCountryMedals, "purple");
+        addGradientLegend(country, countryWidth, maxCountryMedals, "purple");
 
         // add country dropdown
 
@@ -699,7 +709,7 @@ function createMap(elementId) {
         });
 
         // legend
-        addGradientLegend(map, d3.max(geoJSON.features, function(d) {
+        addGradientLegend(map, mapWidth, d3.max(geoJSON.features, function(d) {
                 return d.properties.medals;
         }), "red");
     }
@@ -817,7 +827,7 @@ function createMap(elementId) {
             .style('font-size', 10);
     };
 
-    function addGradientLegend(chart, maxValue, color) {
+    function addGradientLegend(chart, chartWidth, maxValue, color) {
         // colors
         var defs = chart.append("defs");
 
@@ -838,8 +848,12 @@ function createMap(elementId) {
 
         var legendHeight = 10;
         var legendWidth = 100;
+        var legendX = (chartWidth-legendWidth)/2;
+        var topShift = -10;
 
         chart.append("rect")
+            .attr("x", legendX)
+            .attr("y", topShift)
             .attr("width", legendWidth)
             .attr("height", legendHeight)
             .attr("fill", "url(#gradient-" + color + ")");
@@ -847,13 +861,14 @@ function createMap(elementId) {
         // labels
         chart.append("text")
             .attr("id", "min")
-            .attr("y", legendHeight)
+            .attr("x", legendX)
+            .attr("y", legendHeight + topShift)
             .attr("text-anchor", "end")
             .text(0);
         chart.append("text")
             .attr("id", "max")
-            .attr("x", legendWidth)
-            .attr("y", legendHeight)
+            .attr("x", legendX+legendWidth)
+            .attr("y", legendHeight + topShift)
             .attr("text-anchor", "start")
             .text(maxValue);
     }
