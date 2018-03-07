@@ -52,6 +52,12 @@ function createMap(elementId) {
         .append('g')
         .attr('class', 'map');
 
+    var countryHeight = 300;
+    var countryWidth = 600;
+    var country = g
+        .append('g')
+        .attr('class', 'country-chart');
+
 
     addTitle("Summer Olympics", innerWidth/2, 0, 24);
 
@@ -90,7 +96,8 @@ function createMap(elementId) {
 
                 drawLineChart(olympics);
                 drawMap(olympics, geoJSON, countryCodes);
-                drawBarChart(olympics);  
+                drawBarChart(olympics);
+                drawCountryChart(olympics);
         });
         });
     });
@@ -99,6 +106,112 @@ function createMap(elementId) {
         if (error) {
             console.error(msg);
         }
+    }
+
+    function drawCountryChart(olympics) {
+        var rolled = d3.nest()
+            .key(function(d) {
+                return d.NOC;
+            })
+            .key(function(d) {
+                return d.Edition;
+            })
+            .key(function(d) {
+                return d.Sport;
+            })
+            .rollup(function(d) {
+                return {
+                    medalCount: d.length
+                }
+            })
+            .entries(olympics);
+
+        console.log("by country, year, sport", rolled);
+
+        newArray = [];
+        // for each country
+        rolled.forEach(function(d) {
+            //newArray.push({country: d.key, values: []});
+            // for each year
+            d.values.forEach(function(e) {
+                // for each sport
+                e.values.forEach(function(f) {
+                    newArray.push( {
+                        country: d.key,
+                        year: e.key,
+                        sport: f.key,
+                        medals: f.value.medalCount
+                    });
+                });
+            }); 
+        });
+
+        console.log("by country, year, sport, clean", newArray);
+
+        // scales
+        var x = d3
+            .scaleBand()
+            .domain(olympics.map(x => x.Edition))
+            .range([0, countryWidth]);
+
+        console.log('x scale: ', x.domain(), x.range());
+
+        var y = d3
+            .scaleBand()
+            .domain(olympics.map(x => x.Sport))
+            .range([countryHeight, 0]);
+
+        console.log('y scale: ', y.domain(), y.range());
+
+        // axes
+        var xAxis = d3.axisBottom(x);
+
+        country
+            .append('g')
+            .attr('class', 'x-axis')
+            .attr('transform', 'translate(0,' + countryHeight + ')')
+            .call(xAxis);
+
+        var yAxis = d3.axisLeft(y);
+
+        country
+            .append('g')
+            .attr('class', 'y-axis')
+            .call(yAxis);
+
+        var singleCountry = newArray.filter(x => x.country == "HUN");
+
+        var countryOpacityScale = d3
+            .scaleLinear()
+            .domain([0, d3.max(singleCountry, function(d) {
+                return d.medals;
+            })])
+            .range([0, 1]);
+
+        console.log(countryOpacityScale.domain(), countryOpacityScale.range());
+
+        // squares
+        country
+            .selectAll('.square')
+            .data(singleCountry)
+            .enter()
+            .append('rect')
+            .attr('class', 'square')
+            .attr('x', function(d) {
+                //console.log(d.year);
+                return x(d.year);
+            })
+            .attr('y', function(d) {
+                //console.log(d.sport);
+                return y(d.sport);
+            })
+            .attr('width', x.bandwidth)
+            .attr('height', y.bandwidth)
+            .attr('fill', 'purple')
+            .attr('fill-opacity', function(d) {
+                return countryOpacityScale(d.medals);
+            })
+            .attr('stroke', 'black');
     }
 
     function drawBarChart(olympics) {
@@ -560,7 +673,7 @@ function createMap(elementId) {
         addTitle('Medals by Country', mapWidth/2, 0, 20);
 
         d3.select('.map-paths').on('mouseover', function() {
-            console.log(event);
+            //console.log(event);
             
             var dataLabel = map
                 .append('text')
