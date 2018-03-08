@@ -1,8 +1,8 @@
 function createMap(elementId) {
 
     // svg height, width, and inside margins
-    var height = 700;
-    var width = 1325;
+    var height = 900;
+    var width = 2000;
     var margins = {
         top: 50,
         right: 50,
@@ -28,8 +28,6 @@ function createMap(elementId) {
         .attr('transform', 'translate(' + margins.left + ',' + margins.top + ')');
 
     // create groups for each chart
-    
-
     var lineHeight = 200;
     var lineWidth = 300;
     var lineLeftShift = 800;
@@ -238,7 +236,10 @@ function createMap(elementId) {
             .rollup(function(d) {
                 return {
                     medalCount: d.length,
-                    gender: d[0].Gender
+                    // assuming one gender, one sport, one country per athlete
+                    gender: d[0].Gender,
+                    sport: d[0].Sport,
+                    country: d[0].NOC
                 }
             })
             .entries(olympics);
@@ -280,6 +281,14 @@ function createMap(elementId) {
           }
           return 0;
         }
+
+        var outlierCounts = rolled2.filter(x => x.value.All == 1).map(x => x.key);
+        var outliers = rolled.filter(x => outlierCounts.indexOf(x.value.medalCount) >= 0);
+        allOutlierData = outliers.map(function(d) {
+            return { name: d.key, medalCount: d.value.medalCount, gender: d.value.gender[0], country: d.value.country, sport: d.value.sport}
+        });
+
+        console.log('outliers', outlierCounts, allOutlierData);
 
         var histHeight = 200;
         var histWidth = 300;
@@ -352,6 +361,11 @@ function createMap(elementId) {
             .enter()
             .append('text')
             .attr('class', 'label')
+            .attr('id', function(d) {
+                if(d.value.All == 1) {
+                    return generateAthleteId(d);
+                }
+            })
             .attr('x', function(d) {
                 return x(d.key) + x(2)/2;
             })
@@ -402,6 +416,18 @@ function createMap(elementId) {
             });
 
         // functionality
+        d3.select('.histogram').on('mouseover', function() {
+            if(event.target.id != "") {
+                showDataLabel(histogram, event);
+            }
+        });
+
+        d3.select('.histogram').on('mouseout', function() {
+            if(event.target.id != "") {
+                hideDataLabel(histogram);
+            }
+        });
+
         d3.select('#form').on('click', function() {
 
             // change axes?
@@ -419,6 +445,11 @@ function createMap(elementId) {
             // data labels
             histogram
                 .selectAll('.label')
+                .attr('id', function(d) {
+                    if(d.value[event.target.id] == 1) {
+                        return generateAthleteId(d);
+                    }
+                })
                 .attr('y', function(d) {
                     return y(d.value[event.target.id]) - 10;
                 })
@@ -430,6 +461,11 @@ function createMap(elementId) {
         // axis labels and chart title
         addAxisLabels(histogram, 'Number of Medals', 'Number of Athletes', histWidth, histHeight+25);
         addTitle(histogram, 'Distribution of Medals', histWidth, 20);
+    }
+
+    function generateAthleteId(d) {
+        var currAthlete = allOutlierData.filter(x => x.medalCount == d.key)[0];
+        return currAthlete.name + " (" + currAthlete.gender + ") from " + currAthlete.country + ": " + currAthlete.sport;
     }
 
     function drawLineChart(olympics) {
