@@ -234,12 +234,14 @@ function createMap(elementId) {
                 return d.Athlete;
             })
             .rollup(function(d) {
+                var sports = getUnique(d, "Sport");
+                var countries = getUnique(d, "NOC");
+
                 return {
                     medalCount: d.length,
-                    // assuming one gender, one sport, one country per athlete
                     gender: d[0].Gender,
-                    sport: d[0].Sport,
-                    country: d[0].NOC
+                    sports: sports,
+                    countries: countries
                 }
             })
             .entries(olympics);
@@ -285,7 +287,7 @@ function createMap(elementId) {
         var outlierCounts = rolled2.filter(x => x.value.All == 1).map(x => x.key);
         var outliers = rolled.filter(x => outlierCounts.indexOf(x.value.medalCount) >= 0);
         allOutlierData = outliers.map(function(d) {
-            return { name: d.key, medalCount: d.value.medalCount, gender: d.value.gender[0], country: d.value.country, sport: d.value.sport}
+            return { name: d.key, medalCount: d.value.medalCount, gender: d.value.gender[0], countries: d.value.countries, sports: d.value.sports}
         });
 
         console.log('outliers', outlierCounts, allOutlierData);
@@ -463,9 +465,13 @@ function createMap(elementId) {
         addTitle(histogram, 'Distribution of Medals', histWidth, 20);
     }
 
+    function getUnique(d, property) {
+        return Array.from(new Set(d.map(x => x[property]))).join(", ");
+    }
+
     function generateAthleteId(d) {
         var currAthlete = allOutlierData.filter(x => x.medalCount == d.key)[0];
-        return currAthlete.name + " (" + currAthlete.gender + ") from " + currAthlete.country + ": " + currAthlete.sport;
+        return currAthlete.name + " (" + currAthlete.gender + ") from " + currAthlete.countries + ": " + currAthlete.sports;
     }
 
     function drawLineChart(olympics) {
