@@ -2,7 +2,7 @@ function createMap(elementId) {
 
     // svg height, width, and inside margins
     var height = 900;
-    var width = 2000;
+    var width = 1325;
     var margins = {
         top: 50,
         right: 50,
@@ -42,6 +42,11 @@ function createMap(elementId) {
     var map = g
         .append('g')
         .attr('class', 'map');
+
+    var histHeight = 200;
+    var histWidth = 300;
+    var histLeftShift = 800;
+    var histTopShift = 300;
 
     addTitle(g, "Summer Olympics", innerWidth, 24);
 
@@ -360,15 +365,16 @@ function createMap(elementId) {
             .attr('fill-opacity', function(d) {
                 return countryOpacityScale(d.medals);
             })
-            .attr('stroke', 'black');
-
-        d3.select('.country-chart').on('mouseover', function() {
-            showDataLabel(country, event);
-        });
-
-        d3.select('.country-chart').on('mouseout', function() {
-            hideDataLabel(country);
-        });
+            .attr('stroke', 'black')
+            .on('mouseover', function() {
+                showDataLabel(d3.event);
+            })
+            .on('mousemove', function() {
+                moveDataLabel(d3.event);
+            })
+            .on('mouseout', function() {
+                hideDataLabel();
+            });        
 
         if(singleCountry.length > 0) {
             addGradientLegend(country, countryWidth, maxCountryMedals, squareColor);
@@ -446,10 +452,6 @@ function createMap(elementId) {
         var outlierAthleteData = olympics.filter(x => outlierAthleteNames.indexOf(x.Athlete) >= 0)
         console.log('outlier data', outlierAthleteData);
 
-        var histHeight = 200;
-        var histWidth = 300;
-        var histLeftShift = 800;
-        var histTopShift = 300;
         var histogram = g
             .append('g')
             .attr('class', 'histogram')
@@ -539,9 +541,9 @@ function createMap(elementId) {
         var formGroup = d3.select('body')
             .append('form')
             .attr('id', 'form')
-            .style('position', 'relative')
-            .style('top', '-35%')
-            .style('left', '130%');
+            .style('position', 'absolute')
+            .style('top', histTopShift + 50)
+            .style('left', histLeftShift + 250);
 
         var options = ["All", "Females", "Males"];
 
@@ -574,13 +576,13 @@ function createMap(elementId) {
         // functionality
         d3.select('.histogram').on('mouseover', function() {
             if(event.target.id != "") {
-                showDataLabel(histogram, event);
+                showDataLabel(event);
             }
         });
 
         d3.select('.histogram').on('mouseout', function() {
             if(event.target.id != "") {
-                hideDataLabel(histogram);
+                hideDataLabel();
             }
         });
 
@@ -593,10 +595,13 @@ function createMap(elementId) {
         d3.select('#form').on('click', function() {
 
             // change axes?
+            var duration = 1000;
 
             //bars
             histogram
                 .selectAll('.bar')
+                .transition()
+                .duration(duration)
                 .attr('y', function(d) {
                     return y(d.value[event.target.id]);
                 })
@@ -607,6 +612,8 @@ function createMap(elementId) {
             // data labels
             histogram
                 .selectAll('.label')
+                .transition()
+                .duration(1000)
                 .attr('id', function(d) {
                     if(d.value[event.target.id] == 1) {
                         return generateAthleteId(d);
@@ -898,18 +905,18 @@ function createMap(elementId) {
                 } else {
                     return 1;
                 }
+            })
+            .on('mouseover', function() {
+                showDataLabel(d3.event);
+            })
+            .on('mousemove', function() {
+                moveDataLabel(d3.event);
+            })
+            .on('mouseout', function() {
+                hideDataLabel();
             });
 
         addTitle(map, 'Medals by Country', mapWidth, 20);
-
-        // data labels
-        d3.select('.map-paths').on('mouseover', function() {
-            showDataLabel(map, event);
-        });
-
-        d3.select('.map-paths').on('mouseout', function() {
-            hideDataLabel(map);
-        });
 
         // breakdown of medals
         d3.select('.map-paths').on('click', function() {
@@ -931,36 +938,28 @@ function createMap(elementId) {
         d3.select('#form').remove();
     }
 
-    function showDataLabel(chart, event) {
-        //console.log(event);
+    function showDataLabel(event) {
+        console.log(event);
 
-        var dataLabel = chart
-                .append('text')
+        var dataLabel = d3.select('body')
+                .append('div')
                 .attr('id', 'data-label-text')
-                .attr('x', event.clientX)
-                .attr('y', event.clientY)
-                .text(event.target.id);
-
-        var dataLabelBox = dataLabel.node().getBBox();
-
-        chart
-            .append('rect')
-            .attr('id', 'data-label-background')
-            .attr('x', dataLabelBox.x)
-            .attr('y', dataLabelBox.y)
-            .attr('height', dataLabelBox.height + 2)
-            .attr('width', dataLabelBox.width + 2)
-            .attr('fill', 'white')
-            .attr('fill-opacity', 0.5);
+                .style('left', event.pageX + 20)
+                .style('top', event.pageY + 20)
+                .style('position', 'absolute')
+                .style('display', 'inline')
+                .style('background-color', 'white')
+                .html(event.target.id);
     }
 
-    function hideDataLabel(chart) {
-        chart
-            .select('#data-label-text')
-            .remove();
+    function moveDataLabel(event) {
+        var dataLabel = d3.select('#data-label-text')
+            .style('left', event.pageX + 20)
+            .style('top', event.pageY + 20);;
+    }
 
-        chart
-            .select('#data-label-background')
+    function hideDataLabel() {
+        d3.select('#data-label-text')
             .remove();
     }
 
