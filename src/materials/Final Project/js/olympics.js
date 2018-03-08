@@ -645,7 +645,7 @@ function createMap(elementId) {
             .style("text-anchor", "end")
             .attr("transform", "rotate(-90) translate(-10, -12)" );
 
-        var yAxis = d3.axisLeft(y);
+        var yAxis = d3.axisLeft(y).ticks(4);
 
         lineChart
             .append('g')
@@ -669,11 +669,11 @@ function createMap(elementId) {
         }
 
         // lines
-        var lines = ['medalCount', 'athleteCount', 'sportCount', 'eventCount'];
-        
-        var colors = d3.scaleOrdinal().domain(lines).range(d3.schemeCategory20);
-        console.log(colors.domain(), colors.range());
-
+        var lines = [
+            {value: 'medalCount', color: 'red', text: 'Medals'},
+            {value: 'sportCount', color: 'purple', text: 'Sports'},
+            {value: 'eventCount', color: 'green', text: 'Events'}
+        ];
 
         var groups = lineChart
             .selectAll('.line-holder')
@@ -685,19 +685,22 @@ function createMap(elementId) {
             .datum(yearlyData)
             .attr('class', 'line')
             .attr('fill', 'none')
-            .attr('stroke', function(d, i) {
-                return colors(i);
+            .attr('stroke', function(d) {
+                return getLineType(this.parentNode).color;
             })
             .attr('stroke-width', 2)
             .attr('d', function(d) {
-                var lineType = d3.select(this.parentNode).datum();
-                return generateLine(lineType)(d);
+                return generateLine(getLineType(this.parentNode).value)(d);
             });
 
 
-        addLineLegend(lineChart, lines, colors);
-        addTitle(lineChart, 'History of Olympics', lineWidth, 20);
+        addLineLegend(lineChart, lines);
+        addTitle(lineChart, 'History of the Olympics', lineWidth, 20);
         addAxisLabels(lineChart, 'Time', 'Number', lineWidth, lineHeight+40);
+    }
+
+    function getLineType(parentNode) {
+        return d3.select(parentNode).datum();
     }
 
     function groupDataByYear(olympics) {
@@ -713,17 +716,6 @@ function createMap(elementId) {
             .entries(olympics);
 
         console.log("medals by year", yearMedalRolled);
-
-        yearAthleteRolled = d3.nest()
-            .key(function(d) {
-                return d.Edition;
-            })
-            .key(function(d) {
-                return d.Athlete;
-            })
-            .entries(olympics);
-
-        console.log("athletes by year", yearAthleteRolled);
 
         yearSportRolled = d3.nest()
             .key(function(d) {
@@ -748,7 +740,6 @@ function createMap(elementId) {
         console.log("events by year", yearEventRolled);
 
         yearMedalRolled.forEach(function(d, i) {
-            d.value.athleteCount = yearAthleteRolled[i].values.length;
             d.value.sportCount = yearSportRolled[i].values.length;
             d.value.eventCount = yearEventRolled[i].values.length;
         });
@@ -961,14 +952,20 @@ function createMap(elementId) {
             .text(yLabel);
     }
 
-    function addLineLegend(lineChart, lines, colors) {
+    function addLineLegend(lineChart, lines) {
+
+        var legendBoxHeight = 10;
+        var legendHeight = lines.length*legendBoxHeight + 20;
+        var legendX = 40;
+        var legendY = 10;
+
         lineChart
             .append('rect')
             .attr('class', 'legend')
-            .attr('x', 40)
-            .attr('y', 10)
-            .attr('height', 50)
-            .attr('width', 100)
+            .attr('x', legendX)
+            .attr('y', legendY)
+            .attr('height', legendHeight)
+            .attr('width', 80)
             .style('fill', 'none')
             .style('stroke', 'black');
 
@@ -978,14 +975,14 @@ function createMap(elementId) {
             .enter()
             .append('rect')
             .attr('class', 'legend-color')
-            .attr('x', 50)
-            .attr('y', function(d) {
-                return lines.indexOf(d) * 10 + 15;
+            .attr('x', legendX + 10)
+            .attr('y', function(d, i) {
+                return i * legendBoxHeight + legendY + 10;
             })
-            .attr('height', 10)
+            .attr('height', legendBoxHeight)
             .attr('width', 10)
-            .style('fill', function(d, i) {
-                return colors(i);
+            .style('fill', function(d) {
+                return d.color;
             });
 
         lineChart
@@ -994,15 +991,15 @@ function createMap(elementId) {
             .enter()
             .append('text')
             .attr('class', 'legend-text')
-            .attr('x', 75)
-            .attr('y', function(d) {
-                return lines.indexOf(d) * 10 + 17;
+            .attr('x', legendX + 35)
+            .attr('y', function(d, i) {
+                return i * legendBoxHeight + legendY + 12;
             })
             .attr('dominant-baseline', 'hanging')
             .text(function(d) {
-                return d;
+                return d.text;
             })
-            .style('font-size', 10);
+            .style('font-size', legendBoxHeight);
     };
 
     function addGradientLegend(chart, chartWidth, maxValue, color) {
