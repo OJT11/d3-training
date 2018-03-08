@@ -63,7 +63,7 @@ function createMap(elementId) {
                 drawMap(olympics, geoJSON, countryCodes);
                 drawBarChart(olympics);
 
-                d3.select('svg').on('click', function() {
+                d3.select('body').on('click', function() {
                     //console.log(event.target);
                     if(event.target.id == "") {
                         removeHistogramCountryCharts();
