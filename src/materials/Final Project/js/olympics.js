@@ -79,6 +79,156 @@ function createMap(elementId) {
         }
     }
 
+    function drawAthleteChart(outlierAthleteData, athleteClicked) {
+        console.log("by athlete, year, event", outlierAthleteData);
+        var outlierAthleteDataRolled = d3.nest()
+            .key(function(d) {
+                return d.Athlete;
+            })
+            .key(function(d) {
+                return d.Edition;
+            })
+            .key(function(d) {
+                return d.Event;
+            })
+            .rollup(function(d) {
+                return {
+                    medalCount: d.length
+                }
+            })
+            .entries(outlierAthleteData);
+
+        console.log("by athlete, year, event", outlierAthleteDataRolled);
+
+        // newArray = [];
+        // // for each country
+        // outlierAthleteData.forEach(function(d) {
+        //     //newArray.push({country: d.key, values: []});
+        //     // for each year
+        //     d.values.forEach(function(e) {
+        //         // for each sport
+        //         e.values.forEach(function(f) {
+        //             newArray.push( {
+        //                 country: d.key,
+        //                 year: e.key,
+        //                 sport: f.key,
+        //                 medals: f.value.medalCount
+        //             });
+        //         });
+        //     }); 
+        // });
+
+        // console.log("by country, year, sport, clean", newArray);
+
+        // var athleteHeight = 300;
+        // var athleteWidth = 300;
+        // var athleteTopShift = 300;
+        // var athleteLeftShift = 800;
+        // var athlete = g
+        //     .append('g')
+        //     .attr('class', 'athlete-chart')
+        //     .attr('transform', 'translate(' + athleteLeftShift + ',' + athleteTopShift + ')');
+
+        // // scales
+        // var x = d3
+        //     .scaleBand()
+        //     .domain(olympics.map(x => x.Edition))
+        //     .range([0, countryWidth]);
+
+        // console.log('x scale: ', x.domain(), x.range());
+
+        // function compareSports(a, b) {
+        //   if (a < b) {
+        //     return 1;
+        //   }
+        //   if (a > b) {
+        //     return -1;
+        //   }
+        //   return 0;
+        // }
+
+        // var y = d3
+        //     .scaleBand()
+        //     .domain(olympics.map(x => x.Sport).sort(compareSports))
+        //     .range([countryHeight, 0]);
+
+        // console.log('y scale: ', y.domain(), y.range());
+
+        // // axes
+        // var xAxis = d3.axisBottom(x);
+
+        // country
+        //     .append('g')
+        //     .attr('class', 'x-axis')
+        //     .attr('transform', 'translate(0,' + countryHeight + ')')
+        //     .call(xAxis)
+        //     .selectAll("text")  
+        //     .style("text-anchor", "end")
+        //     .attr("transform", "rotate(-90) translate(-10, -12)");
+
+        // var yAxis = d3.axisLeft(y);
+
+        // country
+        //     .append('g')
+        //     .attr('class', 'y-axis')
+        //     .call(yAxis);
+
+        // var singleCountry = newArray.filter(x => x.country == countryClicked.properties.IOC);
+        // var maxCountryMedals = d3.max(singleCountry, function(d) {
+        //     return d.medals;
+        // });
+
+        // var countryOpacityScale = d3
+        //     .scaleLinear()
+        //     .domain([0, maxCountryMedals])
+        //     .range([0, 1]);
+
+        // console.log(countryOpacityScale.domain(), countryOpacityScale.range());
+
+        // var squareColor = "purple";
+
+        // // squares
+        // country
+        //     .selectAll('.square')
+        //     .data(singleCountry)
+        //     .enter()
+        //     .append('rect')
+        //     .attr('class', 'square')
+        //     .attr('id', function(d) {
+        //         return d.sport + "," + d.year + ": " + d.medals + " medal(s)";
+        //     })
+        //     .attr('x', function(d) {
+        //         //console.log(d.year);
+        //         return x(d.year);
+        //     })
+        //     .attr('y', function(d) {
+        //         //console.log(d.sport);
+        //         return y(d.sport);
+        //     })
+        //     .attr('width', x.bandwidth)
+        //     .attr('height', y.bandwidth)
+        //     .attr('fill', squareColor)
+        //     .attr('fill-opacity', function(d) {
+        //         return countryOpacityScale(d.medals);
+        //     })
+        //     .attr('stroke', 'black');
+
+        // d3.select('.country-chart').on('mouseover', function() {
+        //     showDataLabel(country, event);
+        // });
+
+        // d3.select('.country-chart').on('mouseout', function() {
+        //     hideDataLabel(country);
+        // });
+
+        // if(singleCountry.length > 0) {
+        //     addGradientLegend(country, countryWidth, maxCountryMedals, squareColor);
+        // }  
+
+        // // need axis labels?
+        // addTitle(country, 'Medal Breakdown: ' + countryClicked.properties.name, countryWidth, 20);
+    }
+
     function drawCountryChart(olympics, countryClicked) {
         var rolled = d3.nest()
             .key(function(d) {
@@ -292,6 +442,10 @@ function createMap(elementId) {
 
         console.log('outliers', outlierCounts, allOutlierData);
 
+        var outlierAthleteNames = allOutlierData.map(x => x.name);
+        var outlierAthleteData = olympics.filter(x => outlierAthleteNames.indexOf(x.Athlete) >= 0)
+        console.log('outlier data', outlierAthleteData);
+
         var histHeight = 200;
         var histWidth = 300;
         var histLeftShift = 800;
@@ -427,6 +581,12 @@ function createMap(elementId) {
         d3.select('.histogram').on('mouseout', function() {
             if(event.target.id != "") {
                 hideDataLabel(histogram);
+            }
+        });
+
+         d3.select('.histogram').on('click', function() {
+            if(event.target.id != "") {
+                drawAthleteChart(outlierAthleteData, event);
             }
         });
 
