@@ -109,7 +109,7 @@ function createMap(elementId) {
     function groupDataForCountryChart(olympics) {
         var countryYearSportRolled = d3.nest()
             .key(function(d) {
-                return d.NOC;
+                return d.ISO;
             })
             .key(function(d) {
                 return d.Edition;
