@@ -276,7 +276,8 @@ function createMap(elementId) {
             .append('rect')
             .attr('class', 'square')
             .attr('id', function(d) {
-                return d.sport + ", " + d.year + ": " + d.medals + " medal(s)";
+                var countryS = d.medals > 1 ? "s" : "";
+                return d.sport + ", " + d.year + ": " + d.medals + " medal" + countryS;
             })
             .attr('x', function(d) {
                 //console.log(d.year);
@@ -807,7 +808,8 @@ function createMap(elementId) {
             .append('path')
             .attr('id', function(d) {
                 if(d.properties.medals != undefined) {
-                    return d.properties.name + ": " + d.properties.medals + " medal(s)";
+                    var mapS = d.properties.medals > 1 ? "s" : "";
+                    return d.properties.name + ": " + d.properties.medals + " medal" + mapS;
                 } else {
                     return d.properties.name + ": no data available";
                 }
@@ -866,24 +868,24 @@ function createMap(elementId) {
         d3.select('.line-chart').remove();
     }
 
-    function showDataLabel(event) {
-        console.log(event);
+    var dataLabelOffset = 20;
 
-        var dataLabel = d3.select('body')
-                .append('div')
-                .attr('id', 'data-label-text')
-                .style('left', event.pageX + 20)
-                .style('top', event.pageY + 20)
-                .style('position', 'absolute')
-                .style('display', 'inline')
-                .style('background-color', 'white')
-                .html(event.target.id);
+    function showDataLabel(event) {
+        d3.select('body')
+            .append('div')
+            .attr('id', 'data-label-text')
+            .style('left', event.pageX + dataLabelOffset)
+            .style('top', event.pageY + dataLabelOffset)
+            .style('position', 'absolute')
+            .style('display', 'inline')
+            .style('background-color', 'white')
+            .html(event.target.id);
     }
 
     function moveDataLabel(event) {
-        var dataLabel = d3.select('#data-label-text')
-            .style('left', event.pageX + 20)
-            .style('top', event.pageY + 20);;
+        d3.select('#data-label-text')
+            .style('left', event.pageX + dataLabelOffset)
+            .style('top', event.pageY + dataLabelOffset);
     }
 
     function hideDataLabel() {
