@@ -41,6 +41,7 @@ function createMap(elementId) {
         .attr('class', 'map');
 
     addTitle(g, "Summer Olympics", innerWidth, 24);
+    addTitle(g, "Click country or athlete to see more information.", innerWidth, 12, -5);
 
     // read in data
     d3.csv('data/olympics.csv', function(error, olympics) {
@@ -68,7 +69,6 @@ function createMap(elementId) {
                 drawLineChart(olympics);
 
                 d3.select('body').on('click', function() {
-                    //console.log(event.target);
                     if(event.target.id == "") {
                         removeHistogramCountryCharts();
                         removeLineAthleteCharts();
@@ -87,26 +87,24 @@ function createMap(elementId) {
     }
 
     // data processing functions
-    function cleanData(olympicsData, countryCodes) {
+    function cleanData(olympics, countryCodes) {
         var missingCodes = [];
-
         var parseTime = d3.timeParse('%Y');
 
-        olympicsData.forEach(function(d) {
+        olympics.forEach(function(d) {
             d.DateTime = parseTime(d.Edition);
             var match = countryCodes.filter(x => x.IOC == d.NOC);
-            var ISO;
             if(match[0]) {
-                ISO = match[0].ISO;
+                d.ISO = match[0].ISO;
+                d.CountryName = match[0].Country;
             } else {
-                ISO = null;
+                d.ISO = null;
+                d.CountryName = null;
                 missingCodes.push(d.NOC);
             }
-            d.ISO = ISO;
         });
-        
-        console.log("missing ISO codes", Array.from(new Set(missingCodes)));
-        console.log("with ISO codes", olympicsData);
+
+        missingCodes = Array.from(new Set(missingCodes));
     }
 
     var dataForCountryChart = [];
@@ -440,7 +438,6 @@ function createMap(elementId) {
 
         addLineLegend(lineChart, lines);
         addTitle(lineChart, 'History of the Olympics', rightWidth, 15);
-        addAxisLabels(lineChart, null, 'Number', rightWidth, topRightHeight+40);
     }
 
     function drawBarChart(olympics) {
@@ -550,8 +547,8 @@ function createMap(elementId) {
             .append('form')
             .attr('id', 'form')
             .style('position', 'absolute')
-            .style('top', bottomRightTopShift + 50)
-            .style('left', leftShift + 250);
+            .style('top', bottomRightTopShift + 150)
+            .style('left', leftShift + 225);
 
         var options = ["All", "Females", "Males"];
 
@@ -854,12 +851,12 @@ function createMap(elementId) {
             .remove();
     }
 
-    function addTitle(chart, text, chartWidth, fontSize) {
+    function addTitle(chart, text, chartWidth, fontSize, y) {
         chart
             .append('text')
             .attr('class', 'title')
             .attr('x', chartWidth/2)
-            .attr('y', -20)
+            .attr('y', y ? y : -20)
             .attr('text-anchor', 'middle')
             .attr('dominant-baseline', 'baseline')
             .style('font-size', fontSize)
@@ -894,7 +891,7 @@ function createMap(elementId) {
 
         var legendBoxHeight = 10;
         var legendHeight = lines.length*legendBoxHeight + 20;
-        var legendX = 80;
+        var legendX = 120;
         var legendY = 10;
 
         lineChart
