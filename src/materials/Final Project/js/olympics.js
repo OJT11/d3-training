@@ -55,9 +55,17 @@ function createMap(elementId) {
                 handleError(error, 'failed to read country_codes.csv');
                 console.log('raw country_codes.csv data: ', countryCodes);
 
-                drawLineChart(olympics);
-                drawMap(olympics, geoJSON, countryCodes);
+                cleanData(olympics, countryCodes);
+
+                groupDataForHist(olympics);
+                groupDataForCountryChart(olympics);
+                groupDataByYear(olympics);
+
+                mergeOlympicsGeoData(olympics, geoJSON);
+
                 drawBarChart(olympics);
+                drawMap(olympics, geoJSON);
+                drawLineChart(olympics);
 
                 d3.select('body').on('click', function() {
                     //console.log(event.target);
@@ -78,105 +86,33 @@ function createMap(elementId) {
         }
     }
 
-    function compareSports(a, b) {
-          if (a < b) {
-            return 1;
-          }
-          if (a > b) {
-            return -1;
-          }
-          return 0;
+    // data processing functions
+    function cleanData(olympicsData, countryCodes) {
+        var missingCodes = [];
+
+        var parseTime = d3.timeParse('%Y');
+
+        olympicsData.forEach(function(d) {
+            d.DateTime = parseTime(d.Edition);
+            var match = countryCodes.filter(x => x.IOC == d.NOC);
+            var ISO;
+            if(match[0]) {
+                ISO = match[0].ISO;
+            } else {
+                ISO = null;
+                missingCodes.push(d.NOC);
+            }
+            d.ISO = ISO;
+        });
+        
+        console.log("missing ISO codes", Array.from(new Set(missingCodes)));
+        console.log("with ISO codes", olympicsData);
     }
 
-    function drawAthleteChart(outlierAthleteData, athleteClicked) {
-        singleAthleteName = athleteClicked.target.id.split("(")[0].trim();
-        console.log(singleAthleteName);
-        console.log("by athlete, year, event", outlierAthleteData);
-        var outlierAthleteDataRolled = d3.nest()
-            .key(function(d) {
-                return d.Athlete;
-            })
-            .key(function(d) {
-                return d.Edition;
-            })
-            .key(function(d) {
-                return d.Event;
-            })
-            .rollup(function(d) {
-                return {
-                    medalCount: d.length
-                }
-            })
-            .entries(outlierAthleteData);
+    var dataForCountryChart = [];
 
-        console.log("by athlete, year, event", outlierAthleteDataRolled);
-
-        var athlete = g
-            .append('g')
-            .attr('class', 'athlete-chart')
-            .attr('transform', 'translate(' + leftShift + ',0)');
-
-        var singleAthlete = outlierAthleteData.filter(x => x.Athlete == singleAthleteName);
-
-        // scales
-        var x = d3
-            .scaleBand()
-            .domain(singleAthlete.map(x => x.Edition))
-            .range([0, rightWidth]);
-
-        console.log('x scale: ', x.domain(), x.range());
-
-        var y = d3
-            .scaleBand()
-            .domain(singleAthlete.map(x => x.Event).sort(compareSports))
-            .range([topRightHeight, 0]);
-
-        console.log('y scale: ', y.domain(), y.range());
-
-        // axes
-        var xAxis = d3.axisBottom(x);
-
-        athlete
-            .append('g')
-            .attr('class', 'x-axis')
-            .attr('transform', 'translate(0,' + topRightHeight + ')')
-            .call(xAxis);
-
-        var yAxis = d3.axisLeft(y);
-
-        athlete
-            .append('g')
-            .attr('class', 'y-axis')
-            .call(yAxis);
-
-        var colors = { "Gold":"#DAA520", "Silver":"#C0C0C0", "Bronze":"#cd7f32" };
-        var radius = Math.min(x.bandwidth(), y.bandwidth());
-
-        // ellipses
-        athlete
-            .selectAll('.circle')
-            .data(singleAthlete)
-            .enter()
-            .append('circle')
-            .attr('class', 'circle')
-            .attr('cx', function(d) {
-                //console.log(d.year);
-                return x(d.Edition) + x.bandwidth()/2;
-            })
-            .attr('cy', function(d) {
-                //console.log(d.sport);
-                return y(d.Event) + y.bandwidth()/2;
-            })
-            .attr('r', radius/4)
-            .attr('fill', function(d) {
-                return colors[d.Medal];
-            });
-
-        addTitle(athlete, 'Medal Breakdown: ' + singleAthleteName, rightWidth, 15);
-    }
-
-    function drawCountryChart(olympics, countryClicked) {
-        var rolled = d3.nest()
+    function groupDataForCountryChart(olympics) {
+        var countryYearSportRolled = d3.nest()
             .key(function(d) {
                 return d.NOC;
             })
@@ -193,17 +129,15 @@ function createMap(elementId) {
             })
             .entries(olympics);
 
-        console.log("by country, year, sport", rolled);
+        console.log("by country, year, sport", countryYearSportRolled);
 
-        newArray = [];
         // for each country
-        rolled.forEach(function(d) {
-            //newArray.push({country: d.key, values: []});
+        countryYearSportRolled.forEach(function(d) {
             // for each year
             d.values.forEach(function(e) {
                 // for each sport
                 e.values.forEach(function(f) {
-                    newArray.push( {
+                    dataForCountryChart.push( {
                         country: d.key,
                         year: e.key,
                         sport: f.key,
@@ -213,7 +147,488 @@ function createMap(elementId) {
             }); 
         });
 
-        console.log("by country, year, sport, clean", newArray);
+        console.log("by country, year, sport, clean", dataForCountryChart);
+    }
+
+    var yearMedalRolled;
+
+    function groupDataByYear(olympics) {
+        yearMedalRolled = d3.nest()
+            .key(function(d) {
+                return d.DateTime;
+            })
+            .rollup(function(d) {
+                return {
+                    medalCount: d.length,
+                }
+            })
+            .entries(olympics);
+
+        console.log("medals by year", yearMedalRolled);
+
+        yearSportRolled = groupByYearProp(olympics, "Sport");
+        yearEventRolled = groupByYearProp(olympics, "Event");
+
+        yearMedalRolled.forEach(function(d, i) {
+            d.key = new Date(d.key);
+            d.value.sportCount = yearSportRolled[i].values.length;
+            d.value.eventCount = yearEventRolled[i].values.length;
+        });
+
+        console.log("all yearly data", yearMedalRolled);
+    }
+
+    function groupByYearProp(olympics, property) {
+        var grouped = d3.nest()
+            .key(function(d) {
+                return d.DateTime;
+            })
+            .key(function(d) {
+                return d[property];
+            })
+            .entries(olympics);
+
+        console.log("events by " + property, grouped);
+
+        return grouped;
+    }
+
+    var medalCountRolled;
+    var allOutlierData;
+    var outlierAthleteData;
+
+    function groupDataForHist(olympics) {
+        var athleteRolled = d3.nest()
+            .key(function(d) {
+                return d.Athlete;
+            })
+            .rollup(function(d) {
+                var sports = getUnique(d, "Sport");
+                var countries = getUnique(d, "NOC");
+
+                return {
+                    medalCount: d.length,
+                    gender: d[0].Gender,
+                    sports: sports,
+                    countries: countries
+                }
+            })
+            .entries(olympics);
+
+        console.log("by athlete", athleteRolled);
+
+        var medalRange = d3.extent(athleteRolled, function(d) {
+            return d.value.medalCount;
+        });
+
+        console.log(medalRange);
+
+
+        medalCountRolled = d3.nest()
+            .key(function(d) {
+                return d.value.medalCount;
+            })
+            .rollup(function(d, i) {
+                return {
+                    All: d.length,
+                    Males: d.filter(x => x.value.gender == "Men").length,
+                    Females: d.filter(x => x.value.gender == "Women").length
+                };
+            })
+            .entries(athleteRolled);
+
+        medalCountRolled.forEach(function(d) {
+            d.key = +d.key;
+        });
+        medalCountRolled.sort(compare);
+
+        console.log(medalCountRolled);
+
+        
+        var outlierCounts = medalCountRolled.filter(x => x.value.All == 1).map(x => x.key);
+        var outliers = athleteRolled.filter(x => outlierCounts.indexOf(x.value.medalCount) >= 0);
+        allOutlierData = outliers.map(function(d) {
+            return { name: d.key, medalCount: d.value.medalCount, gender: d.value.gender[0], countries: d.value.countries, sports: d.value.sports}
+        });
+
+        console.log('outliers', outlierCounts, allOutlierData);
+
+        var outlierAthleteNames = allOutlierData.map(x => x.name);
+        outlierAthleteData = olympics.filter(x => outlierAthleteNames.indexOf(x.Athlete) >= 0)
+        console.log('outlier data', outlierAthleteData);
+    }
+
+    var countryRolled;
+
+    function mergeOlympicsGeoData(olympics, geoJSON) {
+        countryRolled = d3.nest()
+            .key(function(d) {
+                return d.ISO;
+            })
+            .rollup(function(d) {
+                return d.length;
+            })
+            .entries(olympics);
+
+        console.log("by country", countryRolled);
+
+        geoJSON.features.forEach(function(f) {
+            var medals = countryRolled.filter(x => x.key == f.id);
+            if (medals.length > 0) {
+                f.properties.medals = medals[0].value;
+            } else {
+                f.properties.medals = 0;
+            }
+        });
+
+        console.log("merged geoJSON", geoJSON);
+    }
+
+    // chart functions
+    function drawMap(olympics, geoJSON) {
+        
+        // scale
+        var opacityScale = d3
+            .scaleLinear()
+            .domain([0, d3.max(countryRolled, function(d) {
+                return d.value;
+            })])
+            .range([0, 1]);
+
+        console.log(opacityScale.domain(), opacityScale.range());
+
+        // projection
+        var mercatorProj = d3
+            .geoMercator()
+            .scale(150)
+            .translate([mapWidth / 2, mapHeight / 2 + 150]);
+        var geoPath = d3.geoPath().projection(mercatorProj);
+
+        // map path
+        var mapColor = "red";
+
+        var mapGroup = map
+            .append('g')
+            .attr('class', 'map-paths');
+        mapGroup
+            .selectAll('path')
+            .data(geoJSON.features)
+            .enter()
+            .append('path')
+            .attr('id', function(d) {
+                var mapS = d.properties.medals != 1 ? "s" : "";
+                return d.properties.name + ": " + d.properties.medals + " medal" + mapS;
+            })
+            .attr('d', geoPath)
+            .style('fill', mapColor)
+            .style('stroke', 'black')
+            .style('stroke-width', 0.5)
+            .attr('fill-opacity', function(d) {
+                return opacityScale(d.properties.medals);
+            })
+            .on('mouseover', function() {
+                showDataLabel(d3.event);
+            })
+            .on('mousemove', function() {
+                moveDataLabel(d3.event);
+            })
+            .on('mouseout', function() {
+                hideDataLabel();
+            })
+            .on('click', function() {
+                removeHistogramCountryCharts();
+                var countryClicked = geoJSON.features.filter(x => x.properties.name == event.target.id.split(":")[0])[0];
+                drawCountryChart(olympics, countryClicked);
+            });
+
+        addTitle(map, 'Medals by Country', mapWidth, 20);
+        addGradientLegend(map, mapWidth, d3.max(geoJSON.features, function(d) {
+                return d.properties.medals;
+        }), mapColor);
+    }
+
+    function drawLineChart(olympics) {
+
+        var lineChart = g
+            .append('g')
+            .attr('class', 'line-chart')
+            .attr('transform', 'translate(' + leftShift + ',0)');
+
+        // scales
+        var x = d3
+            .scaleTime()
+            .domain(
+                d3.extent(yearMedalRolled, function(d) {
+                    return d.key;
+                })
+            )
+            .range([0, rightWidth]);
+
+        console.log('x scale: ', x.domain(), x.range());
+
+        var y = d3
+            .scaleLinear()
+            .domain(
+                [0,
+                d3.max(yearMedalRolled, function(d) {
+                    return d.value.medalCount;
+                })]
+            )
+            .range([topRightHeight, 0]);
+
+        console.log('y scale: ', y.domain(), y.range());
+
+        // axes
+        var xAxis = d3.axisBottom(x).ticks(d3.timeYear.every(4));
+
+        lineChart
+            .append('g')
+            .attr('class', 'x-axis')
+            .attr('transform', 'translate(0,' + topRightHeight + ')')
+            .call(xAxis)
+            .selectAll("text")  
+            .style("text-anchor", "end")
+            .attr("transform", "rotate(-90) translate(-10, -12)" );
+
+        var yAxis = d3.axisLeft(y).ticks(4);
+
+        lineChart
+            .append('g')
+            .attr('class', 'y-axis')
+            .call(yAxis);
+
+        // line generator
+        function generateLine(countType) {
+            return d3
+                .line()
+                .x(function(d) {
+                    return x(d.key);
+                })
+                .y(function(d) {
+                    return y(d.value[countType]);
+                })
+                .defined(function(d) {
+                    return !isNaN(d.value[countType]);
+                });
+        }
+
+        // lines
+        var lines = [
+            {value: 'medalCount', color: 'red', text: 'Medals'},
+            {value: 'sportCount', color: 'purple', text: 'Sports'},
+            {value: 'eventCount', color: 'green', text: 'Events'}
+        ];
+
+        lineChart
+            .selectAll('.line-holder')
+            .data(lines)
+            .enter()
+            .append('g')
+            .attr('class', 'line-holder')
+            .append('path')
+            .datum(yearMedalRolled)
+            .attr('class', 'line')
+            .attr('fill', 'none')
+            .attr('stroke', function(d) {
+                return getLineType(this.parentNode).color;
+            })
+            .attr('stroke-width', 2)
+            .attr('d', function(d) {
+                return generateLine(getLineType(this.parentNode).value)(d);
+            });
+
+
+        addLineLegend(lineChart, lines);
+        addTitle(lineChart, 'History of the Olympics', rightWidth, 15);
+        addAxisLabels(lineChart, null, 'Number', rightWidth, topRightHeight+40);
+    }
+
+    function drawBarChart(olympics) {
+        
+        var histogram = g
+            .append('g')
+            .attr('class', 'histogram')
+            .attr('transform', 'translate(' + leftShift + ',' + bottomRightTopShift + ')');
+
+        // scales
+        var x = d3
+            .scaleBand()
+            .domain(medalCountRolled.map(x => x.key))
+            .range([0, rightWidth]);
+
+        console.log('x scale: ', x.domain(), x.range(), x(2));
+
+        var y = d3
+            .scaleLinear()
+            .domain([
+                0,
+                d3.max(medalCountRolled, function(d) {
+                    return d.value.All;
+                })
+            ])
+            .range([bottomRightHeight, 0]);
+
+        console.log('y scale: ', y.domain(), y.range());
+
+        // axes
+        var xAxis = d3.axisBottom(x);
+
+        histogram
+            .append('g')
+            .attr('class', 'x-axis')
+            .attr('transform', 'translate(0,' + bottomRightHeight + ')')
+            .call(xAxis);
+
+        var yAxis = d3.axisLeft(y);
+
+        histogram
+            .append('g')
+            .attr('class', 'y-axis')
+            .call(yAxis);
+        
+        // bars
+        histogram
+            .selectAll('.bar')
+            .data(medalCountRolled)
+            .enter()
+            .append('rect')
+            .attr('class', 'bar')
+            .attr('x', function(d) {
+                return x(d.key);
+            })
+            .attr('y', function(d) {
+                return y(d.value.All);
+            })
+            .attr('width', x.bandwidth)
+            .attr('height', function(d) {
+                return bottomRightHeight - y(d.value.All);
+            })
+            .attr('fill', 'purple');
+
+        // data labels
+        histogram
+            .selectAll('.label')
+            .data(medalCountRolled)
+            .enter()
+            .append('text')
+            .attr('class', 'label')
+            .attr('id', function(d) {
+                if(d.value.All == 1) {
+                    return generateAthleteId(d);
+                }
+            })
+            .attr('x', function(d) {
+                return x(d.key) + x(2)/2;
+            })
+            .attr('y', function(d) {
+                return y(d.value.All) - 10;
+            })
+            .text(function(d) {
+                return d.value.All;
+            })
+            .attr('text-anchor', 'middle')
+            .attr('font-size', 10)
+            .on('mouseover', function() {
+                if(event.target.id != "") {
+                    showDataLabel(event);
+                }
+            })
+            .on('mouseout', function() {
+                if(event.target.id != "") {
+                    hideDataLabel();
+                }
+            })
+            .on('click', function() {
+                if(event.target.id != "") {
+                    removeLineAthleteCharts();
+                    drawAthleteChart(event);
+                }
+            });
+
+        // filter
+        var formGroup = d3.select('body')
+            .append('form')
+            .attr('id', 'form')
+            .style('position', 'absolute')
+            .style('top', bottomRightTopShift + 50)
+            .style('left', leftShift + 250);
+
+        var options = ["All", "Females", "Males"];
+
+        formGroup
+            .selectAll('.radio')
+            .data(options)
+            .enter()
+            .append('div')
+            .attr('class', 'radio')
+            .append('input')
+            .attr('type', 'radio')
+            .attr('name', 'group')
+            .attr('value', function(d) {
+                return d;
+            })
+            .attr('id', function(d) {
+                return d;
+            });
+
+        d3.select("#All")
+            .attr('checked', true);
+
+        formGroup
+            .selectAll('.radio')
+            .append('label')
+            .text(function(d) {
+                return d;
+            });
+
+
+        d3.select('#form').on('click', function() {
+            removeLineAthleteCharts();
+            drawLineChart();
+
+            var duration = 1000;
+
+            //bars
+            histogram
+                .selectAll('.bar')
+                .transition()
+                .duration(duration)
+                .attr('y', function(d) {
+                    return y(d.value[event.target.id]);
+                })
+                .attr('height', function(d) {
+                    return bottomRightHeight - y(d.value[event.target.id]);
+                });
+
+            // data labels
+            histogram
+                .selectAll('.label')
+                .transition()
+                .duration(1000)
+                .attr('id', function(d) {
+                    if(d.value[event.target.id] == 1) {
+                        return generateAthleteId(d);
+                    }
+                })
+                .attr('y', function(d) {
+                    return y(d.value[event.target.id]) - 10;
+                })
+                .text(function(d) {
+                    return d.value[event.target.id];
+                });
+        });
+
+        // axis labels and chart title
+        addAxisLabels(histogram, 'Number of Medals', 'Number of Athletes', rightWidth, bottomRightHeight+25);
+        addTitle(histogram, 'Distribution of Medals', rightWidth, 15);
+    }
+
+    function drawCountryChart(olympics, countryClicked) {
+        
+        var singleCountry = dataForCountryChart.filter(x => x.country == countryClicked.id);
+        var maxCountryMedals = d3.max(singleCountry, function(d) {
+            return d.medals;
+        });
 
         var country = g
             .append('g')
@@ -254,11 +669,6 @@ function createMap(elementId) {
             .attr('class', 'y-axis')
             .call(yAxis);
 
-        var singleCountry = newArray.filter(x => x.country == countryClicked.properties.IOC);
-        var maxCountryMedals = d3.max(singleCountry, function(d) {
-            return d.medals;
-        });
-
         var countryOpacityScale = d3
             .scaleLinear()
             .domain([0, maxCountryMedals])
@@ -276,19 +686,17 @@ function createMap(elementId) {
             .append('rect')
             .attr('class', 'square')
             .attr('id', function(d) {
-                var countryS = d.medals > 1 ? "s" : "";
+                var countryS = d.medals != 1 ? "s" : "";
                 return d.sport + ", " + d.year + ": " + d.medals + " medal" + countryS;
             })
             .attr('x', function(d) {
-                //console.log(d.year);
                 return x(d.year);
             })
             .attr('y', function(d) {
-                //console.log(d.sport);
                 return y(d.sport);
             })
-            .attr('width', x.bandwidth)
-            .attr('height', y.bandwidth)
+            .attr('width', x.bandwidth())
+            .attr('height', y.bandwidth())
             .attr('fill', squareColor)
             .attr('fill-opacity', function(d) {
                 return countryOpacityScale(d.medals);
@@ -311,53 +719,73 @@ function createMap(elementId) {
         addTitle(country, 'Medal Breakdown: ' + countryClicked.properties.name, rightWidth, 15);
     }
 
-    function drawBarChart(olympics) {
-        var rolled = d3.nest()
-            .key(function(d) {
-                return d.Athlete;
+    function drawAthleteChart(athleteClicked) {
+
+        var singleAthleteName = athleteClicked.target.id.split("(")[0].trim();
+        var singleAthlete = outlierAthleteData.filter(x => x.Athlete == singleAthleteName);
+
+        var athlete = g
+            .append('g')
+            .attr('class', 'athlete-chart')
+            .attr('transform', 'translate(' + leftShift + ',0)');
+
+        // scales
+        var x = d3
+            .scaleBand()
+            .domain(singleAthlete.map(x => x.Edition))
+            .range([0, rightWidth]);
+
+        console.log('x scale: ', x.domain(), x.range());
+
+        var y = d3
+            .scaleBand()
+            .domain(singleAthlete.map(x => x.Event).sort(compareSports))
+            .range([topRightHeight, 0]);
+
+        console.log('y scale: ', y.domain(), y.range());
+
+        // axes
+        var xAxis = d3.axisBottom(x);
+
+        athlete
+            .append('g')
+            .attr('class', 'x-axis')
+            .attr('transform', 'translate(0,' + topRightHeight + ')')
+            .call(xAxis);
+
+        var yAxis = d3.axisLeft(y);
+
+        athlete
+            .append('g')
+            .attr('class', 'y-axis')
+            .call(yAxis);
+
+        var colors = { "Gold":"#DAA520", "Silver":"#C0C0C0", "Bronze":"#cd7f32" };
+        var radius = Math.min(x.bandwidth(), y.bandwidth());
+
+        // circles
+        athlete
+            .selectAll('.circle')
+            .data(singleAthlete)
+            .enter()
+            .append('circle')
+            .attr('class', 'circle')
+            .attr('cx', function(d) {
+                return x(d.Edition) + x.bandwidth()/2;
             })
-            .rollup(function(d) {
-                var sports = getUnique(d, "Sport");
-                var countries = getUnique(d, "NOC");
-
-                return {
-                    medalCount: d.length,
-                    gender: d[0].Gender,
-                    sports: sports,
-                    countries: countries
-                }
+            .attr('cy', function(d) {
+                return y(d.Event) + y.bandwidth()/2;
             })
-            .entries(olympics);
+            .attr('r', radius/4)
+            .attr('fill', function(d) {
+                return colors[d.Medal];
+            });
 
-        console.log("by athlete", rolled);
+        addTitle(athlete, 'Medal Breakdown: ' + singleAthleteName, rightWidth, 15);
+    }
 
-        var medalRange = d3.extent(rolled, function(d) {
-            return d.value.medalCount;
-        });
-
-        console.log(medalRange);
-
-
-        var rolled2 = d3.nest()
-            .key(function(d) {
-                return d.value.medalCount;
-            })
-            .rollup(function(d, i) {
-                return {
-                    All: d.length,
-                    Males: d.filter(x => x.value.gender == "Men").length,
-                    Females: d.filter(x => x.value.gender == "Women").length
-                };
-            })
-            .entries(rolled);
-
-        rolled2.forEach(function(d) {
-            d.key = +d.key;
-        });
-        rolled2 = rolled2.sort(compare);
-        console.log(rolled2);
-
-        function compare(a, b) {
+    // helper functions
+    function compare(a, b) {
           if (a.key < b.key) {
             return -1;
           }
@@ -365,199 +793,16 @@ function createMap(elementId) {
             return 1;
           }
           return 0;
-        }
+    }
 
-        var outlierCounts = rolled2.filter(x => x.value.All == 1).map(x => x.key);
-        var outliers = rolled.filter(x => outlierCounts.indexOf(x.value.medalCount) >= 0);
-        allOutlierData = outliers.map(function(d) {
-            return { name: d.key, medalCount: d.value.medalCount, gender: d.value.gender[0], countries: d.value.countries, sports: d.value.sports}
-        });
-
-        console.log('outliers', outlierCounts, allOutlierData);
-
-        var outlierAthleteNames = allOutlierData.map(x => x.name);
-        var outlierAthleteData = olympics.filter(x => outlierAthleteNames.indexOf(x.Athlete) >= 0)
-        console.log('outlier data', outlierAthleteData);
-
-        var histogram = g
-            .append('g')
-            .attr('class', 'histogram')
-            .attr('transform', 'translate(' + leftShift + ',' + bottomRightTopShift + ')');
-
-        // scales
-        var x = d3
-            .scaleBand()
-            .domain(rolled2.map(x => x.key))
-            .range([0, rightWidth]);
-
-        console.log('x scale: ', x.domain(), x.range(), x(2));
-
-        var y = d3
-            .scaleLinear()
-            .domain([
-                0,
-                d3.max(rolled2, function(d) {
-                    return d.value.All;
-                })
-            ])
-            .range([bottomRightHeight, 0]);
-
-        console.log('y scale: ', y.domain(), y.range());
-
-        // axes
-        var xAxis = d3.axisBottom(x);
-
-        histogram
-            .append('g')
-            .attr('class', 'x-axis')
-            .attr('transform', 'translate(0,' + bottomRightHeight + ')')
-            .call(xAxis);
-
-        var yAxis = d3.axisLeft(y);
-
-        histogram
-            .append('g')
-            .attr('class', 'y-axis')
-            .call(yAxis);
-        
-        // bars
-        histogram
-            .selectAll('.bar')
-            .data(rolled2)
-            .enter()
-            .append('rect')
-            .attr('class', 'bar')
-            .attr('x', function(d) {
-                return x(d.key);
-            })
-            .attr('y', function(d) {
-                return y(d.value.All);
-            })
-            .attr('width', x.bandwidth)
-            .attr('height', function(d) {
-                return bottomRightHeight - y(d.value.All);
-            })
-            .attr('fill', 'purple');
-
-        // data labels
-        histogram
-            .selectAll('.label')
-            .data(rolled2)
-            .enter()
-            .append('text')
-            .attr('class', 'label')
-            .attr('id', function(d) {
-                if(d.value.All == 1) {
-                    return generateAthleteId(d);
-                }
-            })
-            .attr('x', function(d) {
-                return x(d.key) + x(2)/2;
-            })
-            .attr('y', function(d) {
-                return y(d.value.All) - 10;
-            })
-            .text(function(d) {
-                return d.value.All;
-            })
-            .attr('text-anchor', 'middle')
-            .attr('font-size', 10);
-
-        // filter
-        // options
-        var formGroup = d3.select('body')
-            .append('form')
-            .attr('id', 'form')
-            .style('position', 'absolute')
-            .style('top', bottomRightTopShift + 50)
-            .style('left', leftShift + 250);
-
-        var options = ["All", "Females", "Males"];
-
-        formGroup
-            .selectAll('.radio')
-            .data(options)
-            .enter()
-            .append('div')
-            .attr('class', 'radio')
-            .append('input')
-            .attr('type', 'radio')
-            .attr('name', 'group')
-            .attr('value', function(d) {
-                return d;
-            })
-            .attr('id', function(d) {
-                return d;
-            });
-
-        d3.select("#All")
-            .attr('checked', true);
-
-        formGroup
-            .selectAll('.radio')
-            .append('label')
-            .text(function(d) {
-                return d;
-            });
-
-        // functionality
-        d3.select('.histogram').on('mouseover', function() {
-            if(event.target.id != "") {
-                showDataLabel(event);
-            }
-        });
-
-        d3.select('.histogram').on('mouseout', function() {
-            if(event.target.id != "") {
-                hideDataLabel();
-            }
-        });
-
-         d3.select('.histogram').on('click', function() {
-            if(event.target.id != "") {
-                removeLineAthleteCharts();
-                drawAthleteChart(outlierAthleteData, event);
-            }
-        });
-
-        d3.select('#form').on('click', function() {
-
-            // change axes?
-            var duration = 1000;
-
-            //bars
-            histogram
-                .selectAll('.bar')
-                .transition()
-                .duration(duration)
-                .attr('y', function(d) {
-                    return y(d.value[event.target.id]);
-                })
-                .attr('height', function(d) {
-                    return bottomRightHeight - y(d.value[event.target.id]);
-                });
-
-            // data labels
-            histogram
-                .selectAll('.label')
-                .transition()
-                .duration(1000)
-                .attr('id', function(d) {
-                    if(d.value[event.target.id] == 1) {
-                        return generateAthleteId(d);
-                    }
-                })
-                .attr('y', function(d) {
-                    return y(d.value[event.target.id]) - 10;
-                })
-                .text(function(d) {
-                    return d.value[event.target.id];
-                });
-        });
-
-        // axis labels and chart title
-        addAxisLabels(histogram, 'Number of Medals', 'Number of Athletes', rightWidth, bottomRightHeight+25);
-        addTitle(histogram, 'Distribution of Medals', rightWidth, 15);
+    function compareSports(a, b) {
+          if (a < b) {
+            return 1;
+          }
+          if (a > b) {
+            return -1;
+          }
+          return 0;
     }
 
     function getUnique(d, property) {
@@ -569,292 +814,8 @@ function createMap(elementId) {
         return currAthlete.name + " (" + currAthlete.gender + ") from " + currAthlete.countries + ": " + currAthlete.sports;
     }
 
-    function drawLineChart(olympics) {
-        yearlyData = groupDataByYear(olympics);
-
-        var parseTime = d3.timeParse('%Y');
-        yearlyData.forEach(function(d) {
-            d.key = parseTime(d.key);
-            if(isNaN(d.key)) {
-                console.log(d);
-            }
-        });
-
-        var lineChart = g
-            .append('g')
-            .attr('class', 'line-chart')
-            .attr('transform', 'translate(' + leftShift + ',0)');
-
-        // scales
-        var x = d3
-            .scaleTime()
-            .domain(
-                d3.extent(yearlyData, function(d) {
-                    return d.key;
-                })
-            )
-            .range([0, rightWidth]);
-
-        console.log('x scale: ', x.domain(), x.range());
-
-        var y = d3
-            .scaleLinear()
-            .domain(
-                [0,
-                d3.max(yearlyData, function(d) {
-                    return d.value.medalCount;
-                })]
-            )
-            .range([topRightHeight, 0]);
-
-        console.log('y scale: ', y.domain(), y.range());
-
-        // axes
-        var xAxis = d3.axisBottom(x).ticks(d3.timeYear.every(4));
-
-        lineChart
-            .append('g')
-            .attr('class', 'x-axis')
-            .attr('transform', 'translate(0,' + topRightHeight + ')')
-            .call(xAxis)
-            .selectAll("text")  
-            .style("text-anchor", "end")
-            .attr("transform", "rotate(-90) translate(-10, -12)" );
-
-        var yAxis = d3.axisLeft(y).ticks(4);
-
-        lineChart
-            .append('g')
-            .attr('class', 'y-axis')
-            .call(yAxis);
-
-        // line generator 
-        var line;
-        function generateLine(countType) {
-            return d3
-                .line()
-                .x(function(d) {
-                    return x(d.key);
-                })
-                .y(function(d) {
-                    return y(d.value[countType]);
-                })
-                .defined(function(d) {
-                    return !isNaN(d.value[countType]);
-                });
-        }
-
-        // lines
-        var lines = [
-            {value: 'medalCount', color: 'red', text: 'Medals'},
-            {value: 'sportCount', color: 'purple', text: 'Sports'},
-            {value: 'eventCount', color: 'green', text: 'Events'}
-        ];
-
-        var groups = lineChart
-            .selectAll('.line-holder')
-            .data(lines)
-            .enter()
-            .append('g')
-            .attr('class', 'line-holder')
-            .append('path')
-            .datum(yearlyData)
-            .attr('class', 'line')
-            .attr('fill', 'none')
-            .attr('stroke', function(d) {
-                return getLineType(this.parentNode).color;
-            })
-            .attr('stroke-width', 2)
-            .attr('d', function(d) {
-                return generateLine(getLineType(this.parentNode).value)(d);
-            });
-
-
-        addLineLegend(lineChart, lines);
-        addTitle(lineChart, 'History of the Olympics', rightWidth, 15);
-        addAxisLabels(lineChart, null, 'Number', rightWidth, topRightHeight+40);
-    }
-
     function getLineType(parentNode) {
         return d3.select(parentNode).datum();
-    }
-
-    function groupDataByYear(olympics) {
-        yearMedalRolled = d3.nest()
-            .key(function(d) {
-                return d.Edition;
-            })
-            .rollup(function(d) {
-                return {
-                    medalCount: d.length,
-                }
-            })
-            .entries(olympics);
-
-        console.log("medals by year", yearMedalRolled);
-
-        yearSportRolled = d3.nest()
-            .key(function(d) {
-                return d.Edition;
-            })
-            .key(function(d) {
-                return d.Sport;
-            })
-            .entries(olympics);
-
-        console.log("sports by year", yearSportRolled);
-
-        yearEventRolled = d3.nest()
-            .key(function(d) {
-                return d.Edition;
-            })
-            .key(function(d) {
-                return d.Event;
-            })
-            .entries(olympics);
-
-        console.log("events by year", yearEventRolled);
-
-        yearMedalRolled.forEach(function(d, i) {
-            d.value.sportCount = yearSportRolled[i].values.length;
-            d.value.eventCount = yearEventRolled[i].values.length;
-        });
-
-        console.log("all yearly data", yearMedalRolled);
-
-        return yearMedalRolled;
-    }
-
-    function drawMap(olympics, geoJSON, countryCodes) {
-        countryRolled = d3.nest()
-            .key(function(d) {
-                return d.NOC;
-            })
-            .rollup(function(d) {
-                return {
-                    medalCount: d.length
-                }
-            })
-            .entries(olympics);
-
-        console.log("by country", countryRolled);
-
-        countryRolled.forEach(function(d) {
-            var match = countryCodes.filter(x => x.IOC == d.key);
-            var ISO;
-            if(match[0]) {
-                ISO = match[0].ISO;
-            } else {
-                ISO = null;
-            }
-            d.value.ISO = ISO;
-        });
-
-        console.log("by country with ISO codes", countryRolled);
-
-        var missingGeoData = [];
-        countryRolled.forEach(function(d) {
-            var match = geoJSON.features.filter(x => x.id == d.value.ISO);
-            if(!match[0]) {
-                missingGeoData.push(d.key)
-            } else {
-                ISO = null;
-            }
-        });
-
-        console.log("countries missing geoData", missingGeoData.length, missingGeoData);
-
-        var missingMedalData = [];
-        geoJSON.features.forEach(function(f) {
-            var medals = countryRolled.filter(x => x.value.ISO == f.id);
-            if (medals.length > 0) {
-                f.properties.IOC = medals[0].key;
-                f.properties.medals = medals[0].value.medalCount;
-            } else {
-                missingMedalData.push(f.id);
-            }
-        });
-
-        console.log("countries missing medal data", missingMedalData.length, missingMedalData);
-
-        console.log("merged geoJSON", geoJSON);
-
-        var opacityScale = d3
-            .scaleLinear()
-            .domain([0, d3.max(countryRolled, function(d) {
-                return d.value.medalCount;
-            })])
-            .range([0, 1]);
-
-        console.log(opacityScale.domain(), opacityScale.range());
-
-        // projection
-        var mercatorProj = d3
-            .geoMercator()
-            .scale(150)
-            .translate([mapWidth / 2, mapHeight / 2 + 150]);
-        var geoPath = d3.geoPath().projection(mercatorProj);
-
-        // map path
-        var mapColor = "red";
-
-        var mapGroup = map
-            .append('g')
-            .attr('class', 'map-paths');
-        mapGroup
-            .selectAll('path')
-            .data(geoJSON.features)
-            .enter()
-            .append('path')
-            .attr('id', function(d) {
-                if(d.properties.medals != undefined) {
-                    var mapS = d.properties.medals > 1 ? "s" : "";
-                    return d.properties.name + ": " + d.properties.medals + " medal" + mapS;
-                } else {
-                    return d.properties.name + ": no data available";
-                }
-            })
-            .attr('d', geoPath)
-            .style('fill', function(d) {
-                if (d.properties.medals) {
-                    return mapColor;
-                } else {
-                    return 'grey';
-                }
-            })
-            .style('stroke', 'black')
-            .style('stroke-width', 0.5)
-            .attr('fill-opacity', function(d) {
-                if (d.properties.medals) {
-                    return opacityScale(d.properties.medals);
-                } else {
-                    return 1;
-                }
-            })
-            .on('mouseover', function() {
-                showDataLabel(d3.event);
-            })
-            .on('mousemove', function() {
-                moveDataLabel(d3.event);
-            })
-            .on('mouseout', function() {
-                hideDataLabel();
-            });
-
-        addTitle(map, 'Medals by Country', mapWidth, 20);
-
-        // breakdown of medals
-        d3.select('.map-paths').on('click', function() {
-            console.log(event.target);
-            removeHistogramCountryCharts();
-            var countryClicked = geoJSON.features.filter(x => x.properties.name == event.target.id.split(":")[0])[0];
-            drawCountryChart(olympics, countryClicked);
-        });
-
-        // legend
-        addGradientLegend(map, mapWidth, d3.max(geoJSON.features, function(d) {
-                return d.properties.medals;
-        }), mapColor);
     }
 
     function removeHistogramCountryCharts() {
@@ -980,7 +941,7 @@ function createMap(elementId) {
     };
 
     function addGradientLegend(chart, chartWidth, maxValue, color) {
-        // colors
+        // gradient
         var defs = chart.append("defs");
 
         var linearGradient = defs.append("linearGradient")
@@ -998,6 +959,7 @@ function createMap(elementId) {
             .attr("offset", "100%")
             .attr("stop-color", color)
 
+        // rectangle
         var legendHeight = 10;
         var legendWidth = 100;
         var legendX = (chartWidth-legendWidth)/2;
