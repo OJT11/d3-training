@@ -27,22 +27,18 @@ function createMap(elementId) {
         .attr('class', 'svg-group')
         .attr('transform', 'translate(' + margins.left + ',' + margins.top + ')');
 
-    // create groups for each chart
-    var lineHeight = 200;
-    var lineWidth = 300;
-    var lineLeftShift = 800;
-    var lineTopShift = 0;
+    // set dimensions for each chart
+    var leftShift = 800;
+    var rightWidth = 300;
+    var topRightHeight = 150;
+    var bottomRightHeight = 350;
+    var bottomRightTopShift = 235;
 
     var mapHeight = 600;
     var mapWidth = 600;
     var map = g
         .append('g')
         .attr('class', 'map');
-
-    var histHeight = 200;
-    var histWidth = 300;
-    var histLeftShift = 800;
-    var histTopShift = 300;
 
     addTitle(g, "Summer Olympics", innerWidth, 24);
 
@@ -82,6 +78,16 @@ function createMap(elementId) {
         }
     }
 
+    function compareSports(a, b) {
+          if (a < b) {
+            return 1;
+          }
+          if (a > b) {
+            return -1;
+          }
+          return 0;
+    }
+
     function drawAthleteChart(outlierAthleteData, athleteClicked) {
         singleAthleteName = athleteClicked.target.id.split("(")[0].trim();
         console.log(singleAthleteName);
@@ -105,14 +111,10 @@ function createMap(elementId) {
 
         console.log("by athlete, year, event", outlierAthleteDataRolled);
 
-        var athleteHeight = 200;
-        var athleteWidth = 300;
-        var athleteTopShift = 0;
-        var athleteLeftShift = 800;
         var athlete = g
             .append('g')
             .attr('class', 'athlete-chart')
-            .attr('transform', 'translate(' + athleteLeftShift + ',' + athleteTopShift + ')');
+            .attr('transform', 'translate(' + leftShift + ',0)');
 
         var singleAthlete = outlierAthleteData.filter(x => x.Athlete == singleAthleteName);
 
@@ -120,24 +122,14 @@ function createMap(elementId) {
         var x = d3
             .scaleBand()
             .domain(singleAthlete.map(x => x.Edition))
-            .range([0, athleteWidth]);
+            .range([0, rightWidth]);
 
         console.log('x scale: ', x.domain(), x.range());
-
-        function compareSports(a, b) {
-          if (a < b) {
-            return 1;
-          }
-          if (a > b) {
-            return -1;
-          }
-          return 0;
-        }
 
         var y = d3
             .scaleBand()
             .domain(singleAthlete.map(x => x.Event).sort(compareSports))
-            .range([athleteHeight, 0]);
+            .range([topRightHeight, 0]);
 
         console.log('y scale: ', y.domain(), y.range());
 
@@ -147,7 +139,7 @@ function createMap(elementId) {
         athlete
             .append('g')
             .attr('class', 'x-axis')
-            .attr('transform', 'translate(0,' + athleteHeight + ')')
+            .attr('transform', 'translate(0,' + topRightHeight + ')')
             .call(xAxis);
 
         var yAxis = d3.axisLeft(y);
@@ -180,9 +172,7 @@ function createMap(elementId) {
                 return colors[d.Medal];
             });
 
-
-        // need axis labels?
-        addTitle(athlete, 'Medal Breakdown: ' + singleAthleteName, athleteWidth, 20);
+        addTitle(athlete, 'Medal Breakdown: ' + singleAthleteName, rightWidth, 15);
     }
 
     function drawCountryChart(olympics, countryClicked) {
@@ -225,37 +215,23 @@ function createMap(elementId) {
 
         console.log("by country, year, sport, clean", newArray);
 
-        var countryHeight = 300;
-        var countryWidth = 300;
-        var countryTopShift = 300;
-        var countryLeftShift = 800;
         var country = g
             .append('g')
             .attr('class', 'country-chart')
-            .attr('transform', 'translate(' + countryLeftShift + ',' + countryTopShift + ')');
+            .attr('transform', 'translate(' + leftShift + ',' + bottomRightTopShift + ')');
 
         // scales
         var x = d3
             .scaleBand()
             .domain(olympics.map(x => x.Edition))
-            .range([0, countryWidth]);
+            .range([0, rightWidth]);
 
-        console.log('x scale: ', x.domain(), x.range());
-
-        function compareSports(a, b) {
-          if (a < b) {
-            return 1;
-          }
-          if (a > b) {
-            return -1;
-          }
-          return 0;
-        }
+        console.log('x scale: ', x.domain(), x.range());       
 
         var y = d3
             .scaleBand()
             .domain(olympics.map(x => x.Sport).sort(compareSports))
-            .range([countryHeight, 0]);
+            .range([bottomRightHeight, 0]);
 
         console.log('y scale: ', y.domain(), y.range());
 
@@ -265,7 +241,7 @@ function createMap(elementId) {
         country
             .append('g')
             .attr('class', 'x-axis')
-            .attr('transform', 'translate(0,' + countryHeight + ')')
+            .attr('transform', 'translate(0,' + bottomRightHeight + ')')
             .call(xAxis)
             .selectAll("text")  
             .style("text-anchor", "end")
@@ -300,7 +276,7 @@ function createMap(elementId) {
             .append('rect')
             .attr('class', 'square')
             .attr('id', function(d) {
-                return d.sport + "," + d.year + ": " + d.medals + " medal(s)";
+                return d.sport + ", " + d.year + ": " + d.medals + " medal(s)";
             })
             .attr('x', function(d) {
                 //console.log(d.year);
@@ -328,11 +304,10 @@ function createMap(elementId) {
             });        
 
         if(singleCountry.length > 0) {
-            addGradientLegend(country, countryWidth, maxCountryMedals, squareColor);
+            addGradientLegend(country, rightWidth, maxCountryMedals, squareColor);
         }  
 
-        // need axis labels?
-        addTitle(country, 'Medal Breakdown: ' + countryClicked.properties.name, countryWidth, 20);
+        addTitle(country, 'Medal Breakdown: ' + countryClicked.properties.name, rightWidth, 15);
     }
 
     function drawBarChart(olympics) {
@@ -406,13 +381,13 @@ function createMap(elementId) {
         var histogram = g
             .append('g')
             .attr('class', 'histogram')
-            .attr('transform', 'translate(' + histLeftShift + ',' + histTopShift + ')');
+            .attr('transform', 'translate(' + leftShift + ',' + bottomRightTopShift + ')');
 
         // scales
         var x = d3
             .scaleBand()
             .domain(rolled2.map(x => x.key))
-            .range([0, histWidth]);
+            .range([0, rightWidth]);
 
         console.log('x scale: ', x.domain(), x.range(), x(2));
 
@@ -424,7 +399,7 @@ function createMap(elementId) {
                     return d.value.All;
                 })
             ])
-            .range([histHeight, 0]);
+            .range([bottomRightHeight, 0]);
 
         console.log('y scale: ', y.domain(), y.range());
 
@@ -434,7 +409,7 @@ function createMap(elementId) {
         histogram
             .append('g')
             .attr('class', 'x-axis')
-            .attr('transform', 'translate(0,' + histHeight + ')')
+            .attr('transform', 'translate(0,' + bottomRightHeight + ')')
             .call(xAxis);
 
         var yAxis = d3.axisLeft(y);
@@ -459,7 +434,7 @@ function createMap(elementId) {
             })
             .attr('width', x.bandwidth)
             .attr('height', function(d) {
-                return histHeight - y(d.value.All);
+                return bottomRightHeight - y(d.value.All);
             })
             .attr('fill', 'purple');
 
@@ -493,8 +468,8 @@ function createMap(elementId) {
             .append('form')
             .attr('id', 'form')
             .style('position', 'absolute')
-            .style('top', histTopShift + 50)
-            .style('left', histLeftShift + 250);
+            .style('top', bottomRightTopShift + 50)
+            .style('left', leftShift + 250);
 
         var options = ["All", "Females", "Males"];
 
@@ -558,7 +533,7 @@ function createMap(elementId) {
                     return y(d.value[event.target.id]);
                 })
                 .attr('height', function(d) {
-                    return histHeight - y(d.value[event.target.id]);
+                    return bottomRightHeight - y(d.value[event.target.id]);
                 });
 
             // data labels
@@ -580,8 +555,8 @@ function createMap(elementId) {
         });
 
         // axis labels and chart title
-        addAxisLabels(histogram, 'Number of Medals', 'Number of Athletes', histWidth, histHeight+25);
-        addTitle(histogram, 'Distribution of Medals', histWidth, 20);
+        addAxisLabels(histogram, 'Number of Medals', 'Number of Athletes', rightWidth, bottomRightHeight+25);
+        addTitle(histogram, 'Distribution of Medals', rightWidth, 15);
     }
 
     function getUnique(d, property) {
@@ -607,7 +582,7 @@ function createMap(elementId) {
         var lineChart = g
             .append('g')
             .attr('class', 'line-chart')
-            .attr('transform', 'translate(' + lineLeftShift + ',' + lineTopShift + ')');
+            .attr('transform', 'translate(' + leftShift + ',0)');
 
         // scales
         var x = d3
@@ -617,7 +592,7 @@ function createMap(elementId) {
                     return d.key;
                 })
             )
-            .range([0, lineWidth]);
+            .range([0, rightWidth]);
 
         console.log('x scale: ', x.domain(), x.range());
 
@@ -629,7 +604,7 @@ function createMap(elementId) {
                     return d.value.medalCount;
                 })]
             )
-            .range([lineHeight, 0]);
+            .range([topRightHeight, 0]);
 
         console.log('y scale: ', y.domain(), y.range());
 
@@ -639,7 +614,7 @@ function createMap(elementId) {
         lineChart
             .append('g')
             .attr('class', 'x-axis')
-            .attr('transform', 'translate(0,' + lineHeight + ')')
+            .attr('transform', 'translate(0,' + topRightHeight + ')')
             .call(xAxis)
             .selectAll("text")  
             .style("text-anchor", "end")
@@ -695,8 +670,8 @@ function createMap(elementId) {
 
 
         addLineLegend(lineChart, lines);
-        addTitle(lineChart, 'History of the Olympics', lineWidth, 20);
-        addAxisLabels(lineChart, 'Time', 'Number', lineWidth, lineHeight+40);
+        addTitle(lineChart, 'History of the Olympics', rightWidth, 15);
+        addAxisLabels(lineChart, null, 'Number', rightWidth, topRightHeight+40);
     }
 
     function getLineType(parentNode) {
@@ -956,7 +931,7 @@ function createMap(elementId) {
 
         var legendBoxHeight = 10;
         var legendHeight = lines.length*legendBoxHeight + 20;
-        var legendX = 40;
+        var legendX = 80;
         var legendY = 10;
 
         lineChart
