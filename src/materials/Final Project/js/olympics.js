@@ -1,8 +1,8 @@
 function createMap(elementId) {
 
     // svg height, width, and inside margins
-    var height = 900;
-    var width = 1325;
+    var height = 675;
+    var width = 1500;
     var margins = {
         top: 50,
         right: 50,
@@ -28,14 +28,14 @@ function createMap(elementId) {
         .attr('transform', 'translate(' + margins.left + ',' + margins.top + ')');
 
     // set dimensions for each chart
-    var leftShift = 800;
-    var rightWidth = 300;
+    var leftShift = 1000;
+    var rightWidth = 400;
     var topRightHeight = 150;
     var bottomRightHeight = 350;
     var bottomRightTopShift = 235;
 
     var mapHeight = 600;
-    var mapWidth = 600;
+    var mapWidth = 800;
     var map = g
         .append('g')
         .attr('class', 'map');
@@ -791,8 +791,8 @@ function createMap(elementId) {
         // projection
         var mercatorProj = d3
             .geoMercator()
-            .scale(100)
-            .translate([mapWidth / 2, mapHeight / 2]);
+            .scale(150)
+            .translate([mapWidth / 2, mapHeight / 2 + 150]);
         var geoPath = d3.geoPath().projection(mercatorProj);
 
         // map path
